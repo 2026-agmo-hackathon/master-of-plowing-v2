@@ -39,8 +39,10 @@ validation path.
 | `master_of_plow_app/` | The C++ application and its unit tests |
 | `master_of_plow_app/src-gen/AppMain/tracking/` | Path-tracking skeleton — **this is what you write** |
 | `master_of_plow_CPP_SDK/` | SeamOS C++ SDK, bundled so a clone builds anywhere |
-| `customui-src/` | Dashboard source (React + Vite). Builds into `master_of_plow_app/ui/` |
+| `customui-src/` | Dashboard **source** (React + Vite) |
+| `master_of_plow_app/ui/` | Dashboard **build output** — what ships in the FIF's `static/` |
 | `rddf/` | Your RDDF inputs, plus the upload helper and format docs |
+| `seamos-assets/` | Marketplace listing images, and `builds/` where packaged FIFs land |
 | `docs/` | Run orchestration, FIF validation, and local-dev notes |
 
 `master_of_plow_app/ui/` is the dashboard build output, and it **is** committed
@@ -59,6 +61,11 @@ npx vite build --outDir ../master_of_plow_app/ui --emptyOutDir
 
 If you forget, your FIF ships the previous dashboard — the C++ side will look
 correct while the screen does not match your code.
+
+`seamos-assets/` holds the marketplace listing images in the layout the
+`upload-app` flow expects — `iconImage.png`, `mainImage.png`, and
+`screenshots/screenshot*.png` — plus `builds/`, where `build-fif` writes the
+packaged `.fif`. The `.fif` files are build output and are not committed.
 
 Dashboard unit tests, from `customui-src/`:
 

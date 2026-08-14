@@ -21,10 +21,12 @@
     "Three things are intentionally different in the participant repository:",
     ".gitignore carries the SeamOS IDE managed block (which un-ignores",
     "*_CPP_SDK/** and, per the IDE generator, ignores <app>/ui/ — the",
-    "participant repository re-includes it), README.md is participant-facing",
-    "rather than workspace-facing, and seamos-assets/{,builds,screenshots}/",
-    ".gitkeep are added so the IDE's build output directories exist in a fresh",
-    "clone. Everything else is copied byte-for-byte.",
+    "participant repository re-includes it) and README.md is participant-facing",
+    "rather than workspace-facing. Everything else is copied byte-for-byte.",
+    "seamos-assets/ follows the upload-app skill convention: iconImage.png,",
+    "mainImage.png, screenshots/screenshot*.png, and builds/ for packaged FIFs.",
+    "The .fif files themselves are build output and never ship; the .gitkeep",
+    "placeholders keep builds/ present in a fresh clone.",
     "customui-src/ carries only the dashboard the feature ships. The simulator",
     "sources it was forked from — src/simulation, src/components, src/3d,",
     "src/protocol, src/state, the Playwright suite, the asset tooling, and the",
@@ -44,6 +46,7 @@
     "master_of_plow_CPP_SDK",
     "customui-src",
     "rddf",
+    "seamos-assets",
     "docs/official-fif-validation-workflow.md",
     "docs/distribution-and-local-dev.md",
     "docs/run-orchestration.md",
@@ -55,7 +58,6 @@
     "artifacts",
     "provenance",
     "references",
-    "seamos-assets",
     ".git",
     "tools"
   ],
@@ -68,7 +70,8 @@
     "**/dist/**",
     "**/node_modules/**",
     "master_of_plow_app/.fif-build-input/**",
-    "master_of_plow_app/sdk/**"
+    "master_of_plow_app/sdk/**",
+    "**/*.fif"
   ],
   "requiredPresent": [
     "master_of_plow_app/ui/index.html"
