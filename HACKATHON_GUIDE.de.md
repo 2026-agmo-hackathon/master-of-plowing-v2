@@ -9,13 +9,12 @@
 
 - **Mission**: Steuere einen virtuellen Traktor und pflüge die Fläche **„Alpha"** in **kürzester Zeit + maximaler Flächenabdeckung**
 - **Harte Einschränkung**: Maximale Fahrgeschwindigkeit **7 km/h** (Werte darüber werden abgelehnt, nicht still begrenzt)
-- **Strafen (insgesamt 3 Arten)**
-  - **Rückwärtsfahrt (Reverse)** auf dem Feld — der betroffene Bereich wird als ungepflügter Bereich zurückgesetzt
-  - **Verlassen des Felds** — der Timer läuft **10-fach schneller** (solange der Traktor außerhalb der Grenze ist)
-  - **Pfadfolgefehler** — der kumulative Pfadfehler (RMS) wirkt sich nachteilig auf das Ergebnis aus
-- **Bewertung**: **Gesamtzeit** und **Flächenanteil (ungepflügte Bereiche minimieren)** fließen beide in die Punktzahl ein.
-  - Es gibt **keinen harten Cutoff** (z. B. 95%) — auch bei niedrigem Flächenanteil ist eine Ergebnisabgabe möglich
-  - Ein niedrigerer Flächenanteil wirkt sich jedoch nachteilig auf die Punktzahl aus
+- **Bewertung**: Eine einzige mit REC aufgezeichnete CSV der Fahrt ergibt eine Punktzahl **von 100**.
+  - Sechs Posten — **Coverage 45 · Duplicate 17 · Time 16 · Retread 9 · Outside 7 · Outside Time 6**
+  - Der Erfüllungsgrad (0–1) jedes Postens wird **kubiert** und dann mit der Punktzahl multipliziert; Punkte kommen erst nahe der Bestmarke schnell dazu
+  - Beispiel: 50% Abdeckung ergeben **5,6** der 45 Coverage-Punkte (0,5³ = 12,5%)
+  - Es gibt **keinen harten Cutoff** (z. B. 95%) — auch bei niedriger Abdeckung wird eine Punktzahl gebildet
+- **INVALID**: manuelles Fahren, Tastatureingaben oder ein Anbaugerätewechsel während der Fahrt bedeuten **gar keine Wertung**
 
 > **Kernaussage**: Was Teilnehmer erstellen und einreichen, ist eine **RDDF (Route Definition Data File)**.
 > Der Traktor-Steuerungsalgorithmus selbst wird vom bereitgestellten Skeleton übernommen — Teilnehmer formulieren die **optimale Route zum Pflügen des Felds** als RDDF und reichen diese ein.
@@ -97,6 +96,10 @@ Es ist das wesentliche Ergebnis, das Teilnehmer im Wettbewerb einreichen, und de
 
 **9 Spalten**, getrennt durch Tabulator (`\t`), ein Waypoint pro Zeile:
 
+> Der Parser akzeptiert auch eine **7-Spalten-Form** ohne die führenden `lineNo` und
+> `index` (`RddfParser.cpp`). Dieser Leitfaden und die Beispieldateien nutzen 9 Spalten,
+> was wir empfehlen.
+
 ```
 lineNo  index  lat         lon          res1  res2  res3  speed  implementFlag
 1       1      35.8000317  126.8807033  0.0   0.0   0.0   3.00   1
@@ -120,7 +123,7 @@ lineNo  index  lat         lon          res1  res2  res3  speed  implementFlag
 
 - `0 < speed ≤ 7.0` — Vorwärtsfahrt; unter `2,05 km/h` wird mit Warnung geladen
 - `speed = 0` — expliziter Stopp-Waypoint
-- `-7.0 ≤ speed < 0` — Rückwärtsfahrt (Wettbewerbs-Penalty); Beträge unter `2,05 km/h` erzeugen eine Warnung
+- `-7.0 ≤ speed < 0` — Rückwärtsfahrt. Eine eigene Rückwärts-Penalty gibt es nicht, aber die Zeit fürs Anhalten und Wiederbeschleunigen sowie die Doppelarbeit kosten Punkte (§7.4); Beträge unter `2,05 km/h` erzeugen eine Warnung
 - Wenn das Vorzeichen der Geschwindigkeit zwischen benachbarten Waypoints wechselt, liegt ein **Gangwechselpunkt** vor — die Waypoints müssen so angeordnet sein, dass die Fahrtrichtung (Heading) umgekehrt wird
 
 ### 4.3 implementFlag
@@ -128,22 +131,27 @@ lineNo  index  lat         lon          res1  res2  res3  speed  implementFlag
 - Beim Pflügen auf einer Spur: `1`
 - Beim Wenden im Vorgewende (headland) am Feldrand: `0`
 - **Rückwärtsabschnitte immer `0`** — beim Rückwärtsfahren wird nicht gepflügt.
+- Auch beim Wenden im Vorgewende zählt ein Anbaugerät über bereits bearbeitetem Boden als `Retread` (§7.2)
 
 ### 4.4 Automatische Validierung
 
 RDDF-Dateien werden sofort nach Empfang aus der Cloud automatisch validiert. Formatfehler und Verstöße gegen Sicherheitsobergrenzen werden **nicht gespeichert und abgelehnt**; physikalische Nachführgrenzen werden unverändert geladen und als Warnung gemeldet. Die Validierungslogik ist in `RddfValidator.cpp` definiert.
 
-| Regel | Inhalt | Bei Verstoß |
-|------|------|---------|
-| **(1) Leere Datei** | 0 Waypoints | abgelehnt |
-| **(2) Geschwindigkeitsbereich** | `\|speed\| ≤ 7,0 km/h`; ein Nicht-null-Betrag unter `2,05 km/h` kann nicht dauerhaft gehalten werden | Oberhalb der Grenze ablehnen; niedrige Geschwindigkeit unverändert laden und warnen |
-| **(3) Waypoint-Abstand** | Abstand benachbarter Punkte **mindestens 0,05 m und höchstens 5,0 m** | Ablehnung mit dem betroffenen Paar und dem tatsächlichen Abstand |
-| **(4) Physikalische Krümmung** | Krümmung aus der Headingänderung über drei aufeinanderfolgende Punkte, verglichen mit dem Mindestwendekreis des Fahrzeugs (ca. **4,35 m**) | Unverändert laden und vor der Nachführgrenze warnen |
+| Prüfung | Inhalt | Bei Verstoß |
+|---------|--------|-------------|
+| **Leere Datei** (Rule 4) | 0 Waypoints | abgelehnt |
+| **Wertgültigkeit** | `lat`, `lon` und `speed` müssen endlich sein (kein NaN, kein inf) | Ablehnung mit Angabe des Waypoint-Index |
+| **implementFlag** | Nur `0` oder `1` zulässig | Ablehnung mit tatsächlichem Wert und Waypoint-Index |
+| **Geschwindigkeitsobergrenze** | `\|speed\| ≤ 7,0 km/h` | Oberhalb der Grenze ablehnen |
+| **Geschwindigkeitsuntergrenze** | Nicht-null-Betrag unter `2,05 km/h` | Unverändert laden und warnen |
+| **Waypoint-Abstand** (Rule 3) | Abstand benachbarter Punkte **mindestens 0,05 m und höchstens 5,0 m** | Ablehnung mit dem betroffenen Paar und dem tatsächlichen Abstand |
+| **Physikalische Krümmung** (Rule 6) | Krümmung aus der Headingänderung über drei aufeinanderfolgende Punkte, verglichen mit dem Mindestwendekreis des Fahrzeugs (ca. **4,35 m**) | Unverändert laden und vor der Nachführgrenze warnen |
 
-> Im Code entsprechen diese Punkte Rule 1 · Rule 2 · Rule 3 · Rule 6
-> (`RddfValidator.cpp`). Die Konstanten stehen in `RddfValidator.hpp`:
-> `MIN_WAYPOINT_SPACING_M = 0.05`, `MAX_WAYPOINT_SPACING_M = 5.0`,
-> `MAX_MACHINE_SPEED_KMH = 7.0`, `MIN_MACHINE_SPEED_KMH = 2.05`.
+> Die Konstanten stehen in `RddfValidator.hpp`: `MIN_WAYPOINT_SPACING_M = 0.05`,
+> `MAX_WAYPOINT_SPACING_M = 5.0`, `MAX_MACHINE_SPEED_KMH = 7.0`,
+> `MIN_MACHINE_SPEED_KMH = 2.05`; der Mindestwendekreis wird direkt aus den
+> Tracker-Konstanten als `WHEELBASE_M / tan(WHEEL_MAX_RAD)` berechnet.
+> Die Ablehnung **stoppt beim ersten Verstoß**, es wird also immer nur ein Grund gemeldet.
 
 #### Verhalten bei Ablehnung
 
@@ -165,13 +173,18 @@ vergleichen.
 
 ### 4.5 Karteninformationen (Field Maps)
 
-Im Wettbewerb werden **3 öffentliche Karten (M1, M2, M3)** verwendet. Das Polygon (Feldgrenze) jeder Karte ist in WGS84-Koordinaten (`lat, lon`) definiert — die RDDF der Teilnehmer soll das Innere des jeweiligen Polygons möglichst vollständig abdecken.
+Der Wettbewerb hat **vier Karten**. M1–M3 sind öffentlich; **M4 ist hidden** und ihre Signale sind gesperrt, bis die Organisatoren sie freigeben. Das Polygon (Feldgrenze) jeder Karte ist in WGS84-Koordinaten (`lat, lon`) definiert — die RDDF der Teilnehmer soll das Innere des jeweiligen Polygons möglichst vollständig abdecken.
 
-| Karte | Name | Origin (lat, lon) | Fläche | Eckpunkte |
-|----|------|-------------------|------|-----------|
-| **M1** | Open Fields | 35.8000, 126.8800 | 1.500 m² | 4 |
-| **M2** | Sloped Acres | 34.6800, 126.9100 | 1.948 m² | 37 |
-| **M3** | Patchwork Plots | 35.4200, 127.3900 | 1.355 m² | 54 |
+| Karte | Name | Origin (lat, lon) | Fläche | Eckpunkte | Verfügbarkeit |
+|----|------|-------------------|------|-----------|---------------|
+| **M1** | Open Fields | 35.8000, 126.8800 | 1.500 m² | 4 | öffentlich |
+| **M2** | Sloped Acres | 34.6800, 126.9100 | 1.948 m² | 37 | öffentlich |
+| **M3** | Patchwork Plots | 35.4200, 127.3900 | 1.355 m² | 54 | öffentlich |
+| **M4** | Crooked Bottoms | 35.2000, 127.4600 | 1.879 m² | 89 | **hidden** |
+
+> Das M4-Polygon wird verteilt, sobald die Organisatoren die Karte freigeben. Bis dahin sind
+> ihre Signale gesperrt, ein RDDF lässt sich also nicht vorbereiten. Die vier Karten ergeben
+> zusammen 6.682 m².
 
 > Origin ist der GPS-Referenzpunkt für den lokalen Ursprung (0, 0) des Polygons (zur Referenz); die Fläche ist der per Shoelace-Formel berechnete m²-Wert.
 
@@ -288,29 +301,49 @@ In der einfachsten Form schreibst du tab-getrennte Daten direkt in einem Textedi
 
 Dutzende bis Hunderte von Waypoints von Hand einzutragen ist unpraktikabel. Üblicherweise schreibt man ein Skript, das **Feldgeometrie + Algorithmusparameter** (Spurabstand, Wendekreisradius usw.) als Eingabe nimmt und das RDDF generiert. Die Programmiersprache ist frei wählbar — dieser Leitfaden zeigt ein Python-Beispiel.
 
-#### Beispiel: Boustrophedon (Hin- und Rückfahrt) + Halbkreis-U-turn
+#### Beispiel: Skip-Lane-Boustrophedon + Halbkreis-U-turn
 
-Das Feld wird in parallele Spuren im SWATH-Abstand (Pflugbreite) aufgeteilt, und gerade/ungerade Spuren werden abwechselnd abgefahren. An den Enden erfolgt der Übergang zur nächsten Spur über einen **vorwärts fahrenden Halbkreis-U-turn**. Da keine Rückwärtsfahrt verwendet wird, wird die **Penalty durch ungepflügte-Bereich-Reset vermieden**.
+Das Feld wird in parallele Spuren im SWATH-Abstand (Pflugbreite) aufgeteilt; am Spurende
+erfolgt der Übergang zur nächsten Spur über einen **vorwärts gefahrenen Halbkreis-U-turn**.
+Ohne Rückwärtsfahrt entfällt die Zeit fürs Anhalten und Wiederbeschleunigen.
+
+**Eine einfache Hin- und Rückfahrt in die Nachbarspur ist nicht möglich.** Dieser Halbkreis
+hätte den Radius `SWATH / 2`, bei SWATH = 4 m also 2 m — deutlich unter dem Mindestwendekreis
+von **4,35 m**. Die Lenkung geht auf Anschlag und das Fahrzeug läuft trotzdem aus der Kurve.
+
+Deshalb werden Spuren **übersprungen**. Wendet man in eine Spur, die `d` Spuren entfernt liegt,
+beträgt der Radius `d × SWATH / 2`, und dieser Wert muss bei jeder Wende mindestens 4,35 m sein.
+
+Befährt man die **vordere und die hintere Hälfte der Spuren abwechselnd**, ist das immer erfüllt.
+Bei 7 Spuren lautet die Reihenfolge `0, 4, 1, 5, 2, 6, 3`; die Abstände sind 4, 3, 4, 3, 4, 3,
+sodass selbst die engste Wende einen Radius von `3 × 4 / 2 = 6 m` hat.
 
 ```
-↑ Spur 0       U-turn ↓ Spur 1       U-turn ↑ Spur 2  ...
-│             ╲          │            ╱          │
-│              ╲         │           ╱           │
-│           Halbkreis-U-turn   │       Halbkreis-U-turn      │
+Spur:      0    1    2    3    4    5    6
+Reihenfolge: 1  3    5    7    2    4    6
+           └── vordere Hälfte ──┘└ hintere ┘
+
+  ↑ Spur 0 ─────────╮
+                    │  Radius = (Spurabstand) × SWATH / 2  ≥ 4,35 m
+  ↓ Spur 4 ─────────╯
 ```
+
+Der kleinste Abstand entspricht `Spurenzahl der vorderen Hälfte − 1`. Das Muster setzt also
+voraus, dass das Feld breiter ist als `SWATH × (2 × 4,35 / SWATH + 1)`. Bei einem schmaleren
+Feld ist ein Halbkreis-U-turn gar nicht nutzbar; dann kommen nur eine Omega-Wende über die
+Feldgrenze hinaus (→ Outside-Abzug) oder eine Dreipunktwende (→ Rückwärtsabschnitt) infrage.
 
 #### Minimales funktionsfähiges Beispielskript (`gen_rddf.py`)
 
 ```python
 """
-gen_rddf.py — Beispiel zur RDDF-Generierung im Boustrophedon-Muster
-Teilnehmer sollen dieses Skript als Ausgangspunkt verwenden und mit
-eigenen Algorithmen weiterentwickeln.
+gen_rddf.py - Beispielgenerator fuer ein RDDF im Skip-Lane-Boustrophedon
+Als Ausgangspunkt gedacht - baue daraus deinen eigenen Algorithmus.
 """
 
 import math
 
-# --- Feldursprung (unten links) und Umrechnung in Lat/Lon ---
+# --- Feldursprung (unten links) und Umrechnung in lat/lon ---
 LAT0, LON0 = 35.8001, 126.8807
 M_PER_DEG_LAT = 110540.0
 M_PER_DEG_LON = 111320.0 * math.cos(math.radians(LAT0))
@@ -319,59 +352,96 @@ def to_latlon(x_m, y_m):
     return (LAT0 + y_m / M_PER_DEG_LAT,
             LON0 + x_m / M_PER_DEG_LON)
 
-# --- Parameter ---
-FIELD_W = 30.0     # Feldbreite Ost-West (m)
-FIELD_H = 50.0     # Feldlänge Nord-Süd (m)
-SWATH   = 4.0      # Spurabstand = Pflugbreite (m)
-STEP    = 1.0      # Waypoint-Abstand (m)
-V_LANE  = 3.0      # Spurgeschwindigkeit (km/h)
-V_TURN  = 1.5      # Wendegeschwindigkeit (km/h)
-N_ARC   = 16       # Anzahl der Segmente für den Halbkreis-U-turn
+# --- Physikalische Grenzen des Fahrzeugs (gleiche Werte wie RddfValidator) ---
+MIN_TURN_R  = 4.35     # WHEELBASE_M 2.05 / tan(WHEEL_MAX_RAD 0.44)
+MAX_SPACING = 5.0      # max. Abstand benachbarter Waypoints (darueber wird die Datei abgelehnt)
 
-waypoints = []  # (x, y, speed, implementFlag)
-r = SWATH / 2.0
+# --- Parameter ---
+FIELD_W = 30.0     # Feldbreite, Ost-West (m)
+FIELD_H = 50.0     # Feldlaenge, Nord-Sued (m)
+SWATH   = 4.0      # Spurabstand = Pflugbreite (m)
+STEP    = 1.0      # Waypoint-Abstand (m) - muss <= MAX_SPACING sein
+V_LANE  = 3.0      # Spurgeschwindigkeit (km/h)
+V_TURN  = 2.5      # Wendegeschwindigkeit (km/h) - mindestens die Kriechgrenze 2.05
+N_ARC   = 16       # Segmente je U-turn-Halbkreis
+
+assert STEP <= MAX_SPACING
+
 n_lanes = int((FIELD_W - SWATH) // SWATH) + 1
 
-for k in range(n_lanes):
-    x = SWATH / 2.0 + k * SWATH
-    going_up = (k % 2 == 0)
+# Direkt in die Nachbarspur zu wenden ergibt Radius SWATH/2 - unter dem Minimum.
+# Vordere und hintere Haelfte abwechselnd zu befahren haelt jeden Abstand bei
+# mindestens (half - 1) Spuren.
+half = (n_lanes + 1) // 2
+order = []
+for i in range(half):
+    order.append(i)
+    if i + half < n_lanes:
+        order.append(i + half)
 
-    # (1) Gerade Spur — Pflug aktiv (ON)
-    y0, y1 = (r, FIELD_H - r) if going_up else (FIELD_H - r, r)
+# Kleinster genutzter Wenderadius und wie weit die Halbkreise ueberstehen.
+MIN_R_USED = (half - 1) * SWATH / 2.0
+HEADLAND   = half * SWATH / 2.0
+assert MIN_R_USED >= MIN_TURN_R, (
+    f"field too narrow: turn radius {MIN_R_USED:.2f} m < {MIN_TURN_R} m")
+
+# Vorgewende an beiden Enden freilassen, damit die Halbkreise im Feld bleiben.
+Y_LO, Y_HI = HEADLAND, FIELD_H - HEADLAND
+
+waypoints = []  # (x, y, speed, implementFlag)
+lane_x = lambda k: SWATH / 2.0 + k * SWATH
+
+for n, k in enumerate(order):
+    x = lane_x(k)
+    going_up = (n % 2 == 0)
+
+    # (1) Gerade Spur - Anbaugeraet ABGESENKT
+    y0, y1 = (Y_LO, Y_HI) if going_up else (Y_HI, Y_LO)
     n_steps = max(2, int(abs(y1 - y0) / STEP) + 1)
     for i in range(n_steps):
         t = i / (n_steps - 1)
         waypoints.append((x, y0 + (y1 - y0) * t, V_LANE, 1))
 
-    # (2) Halbkreis-U-turn zur naechsten Spur — Pflug inaktiv (OFF)
-    if k == n_lanes - 1:
+    # (2) Halbkreis-U-turn in die naechste Spur - Anbaugeraet ANGEHOBEN
+    if n == len(order) - 1:
         break
-    cx, cy = x + r, y1
-    th0 = math.pi
-    th1 = 0.0 if going_up else 2.0 * math.pi   # oberer ↗ / unterer ↘ Halbkreis
-    for j in range(1, N_ARC + 1):
+    x_next = lane_x(order[n + 1])
+    r = abs(x_next - x) / 2.0
+    assert r >= MIN_TURN_R, f"turn radius {r:.2f} m < {MIN_TURN_R} m"
+    cx, cy = (x + x_next) / 2.0, y1
+    th0 = math.pi if x_next > x else 0.0
+    th1 = 0.0 if x_next > x else math.pi
+    sign = 1.0 if going_up else -1.0            # oben nach oben ausbeulen, unten nach unten
+    # Der letzte Punkt (j = N_ARC) faellt mit dem ersten Punkt der naechsten Spur zusammen.
+    # Dieselbe Koordinate zweimal ergibt Abstand 0 und wird abgelehnt.
+    for j in range(1, N_ARC):
         theta = th0 + (th1 - th0) * j / N_ARC
         waypoints.append((cx + r * math.cos(theta),
-                          cy + r * math.sin(theta),
+                          cy + sign * r * math.sin(theta),
                           V_TURN, 0))
 
-# --- RDDF-Dateiausgabe (Tabulator-getrennt, 9 Spalten) ---
+# --- RDDF-Datei schreiben (tab-getrennt, 9 Spalten) ---
 with open("alpha.rddf", "w") as f:
     for idx, (x, y, v, flag) in enumerate(waypoints, 1):
         lat, lon = to_latlon(x, y)
         f.write(f"{idx}\t{idx}\t{lat:.7f}\t{lon:.7f}\t0.0\t0.0\t0.0\t{v:.2f}\t{flag}\n")
 
-print(f"{len(waypoints)} waypoints → alpha.rddf")
+print(f"{len(waypoints)} waypoints, {n_lanes} lanes, "
+      f"min turn R {MIN_R_USED:.1f} m, headland {HEADLAND:.1f} m")
 ```
 
 #### Punkte zur Weiterentwicklung mit eigenem Algorithmus
 
-Das obige Skript behandelt nur **rechteckige Felder mit gleichmäßigen Spuren**. Im tatsächlichen Wettbewerb müssen folgende Punkte durch eigene Algorithmen ersetzt werden:
+Das obige Skript behandelt nur **rechteckige Felder mit gleichmäßigen Spuren** und lässt die
+Vorgewende-Streifen (jeweils `HEADLAND` tief) völlig ungepflügt. Im tatsächlichen Wettbewerb
+müssen folgende Punkte durch eigene Algorithmen ersetzt werden:
 
 - **Polygon-Verarbeitung der Feldgrenze** — Spurlängen an die tatsächliche Feldform (kein Rechteck) anpassen
-- **Separater Umgang mit dem Vorgewende (headland)** — wenn der Halbkreis-U-turn über den Feldrand hinausgeht, greift die **Timer-10-fach-Beschleunigung** als Penalty
-- **Optimierung von Spurabstand / Wendekreisradius** — Mindestwendekreis des Traktors ≈ **4,35 m** (`WHEELBASE_M 2.05 / tan(WHEEL_MAX_RAD 0.44)`); SWATH sollte größer sein, um einen gleichmäßigen U-turn zu ermöglichen
-- **Start- und Endpunkt** — Entwurf der Einfahrtroute vom Punkt A zur ersten Spur
+- **Vorgewende füllen** — die vom Beispiel übrig gelassenen Streifen in einem abschließenden separaten Durchgang bearbeiten. Sonst gehen sie direkt von der Coverage ab
+- **Wenden innerhalb des Felds abschließen** — ein Halbkreis über die Grenze hinaus kostet **Outside** für die Fläche und **Outside Time** für die Zeit (§7.2)
+- **Doppelarbeit minimieren** — eine bereits fertige Zelle erneut zu überfahren zählt als **Duplicate**, Räder auf bearbeitetem Boden als **Retread** (§7.2)
+- **Optimierung von Spurabstand / Wenderadius** — ein kleinerer Spurabstand verkürzt die Übergänge, solange jede Wende den Mindestradius von **4,35 m** einhält
+- **Start- und Endpunkt** — Entwurf der Einfahrtroute vom Spawn-Punkt der Karte zur ersten Spur
 - **Minimierung ungepflügter Bereiche** — kleine ungepflügte Bereiche an Ecken und Rändern separat behandeln
 
 ### 5.4 Validierungs-Checkliste
@@ -385,10 +455,10 @@ Prüfe folgende Punkte, bevor du das RDDF hochlädst.
 - [ ] Liegt der Abstand benachbarter Waypoints im Bereich **0,05 m ~ 5,0 m**? — außerhalb dieses Bereichs wird die Datei abgelehnt (§4.4 Regel 3)
 - [ ] Sind auch gerade Abschnitte mit **höchstens 5 m** Abstand besetzt? — eine lange Gerade mit nur Start- und Endpunkt wird abgelehnt
 - [ ] Sind Kurvenabschnitte dicht genug besetzt? — je größer die Krümmung, desto feiner die Unterteilung
-- [ ] Keine Abschnitte mit `speed < 0` auf dem gepflügten Feld? (Rückwärtsfahrt-Penalty vermeiden)
 - [ ] Bei Rückwärts → Vorwärts-Wechsel: **Heading umgekehrt**? (Drehung auf der Stelle nicht möglich)
 - [ ] `implementFlag` aller Rückwärtsabschnitte ist `0`?
-- [ ] U-turn-Pfad weicht nicht stark von der Feldgrenze ab? (10-fach-Beschleunigung Penalty)
+- [ ] Ist jeder Wenderadius mindestens **4,35 m**? — Engeres kann der Traktor physikalisch nicht fahren (§4.4)
+- [ ] Verlässt der U-turn-Pfad die Feldgrenze nicht? (Abzüge bei Outside · Outside Time, §7.2)
 
 ---
 
@@ -449,64 +519,124 @@ Nach dem Upload empfängt die App das RDDF über den `CloudDownloadListener` und
 ### 7.1 Missionsbedingungen
 
 | Punkt | Wert |
-|------|-----|
-| Startpunkt | **Position des ersten Waypoints im RDDF** (beim Map Switch wird der Traktor auf diese Position ausgerichtet) |
-| Zielfeld | **M1 · Open Fields**, **M2 · Sloped Acres**, **M3 · Patchwork Plots** — 3 öffentliche Karten (siehe §4.5) |
-| Zielvorgabe | **Kein harter Cutoff** — Flächenanteil fließt proportional in die Punktzahl ein |
-| Maximalgeschwindigkeit | **7 km/h** |
-| Overlap | Erlaubt (kein Punktabzug) |
+|-------|------|
+| Startposition | Der **Spawn-Punkt der Karte**. Die Fahrfreigabe kommt erst, wenn Waypoint 0 deines RDDF dort liegt (§4.4) |
+| Zielfelder | **M1 · M2 · M3** öffentlich; **M4** hidden — Signale gesperrt bis zur Freigabe (§4.5) |
+| Zielvorgabe | **Kein harter Cutoff** — auch bei niedriger Abdeckung wird gewertet |
+| Höchstgeschwindigkeit | **7 km/h** |
+| Anbaugerät | **Genau eines** pro Fahrt — ein Wechsel während der Aufzeichnung macht die Fahrt ungültig |
 
-### 7.2 Strafen
+### 7.2 Bewertung (100 Punkte)
 
-Es gibt drei Strafen, die die Wettbewerbsbewertung beeinflussen.
+Eine **einzige, mit REC aufgezeichnete CSV** ergibt die Punktzahl. Flächen unterscheiden sich
+von Feld zu Feld, daher wird alles vor der Bewertung in **Verhältnisse (0–1)** normiert.
 
-#### (1) Rückwärtsfahrt auf dem Feld — ungepflügter Bereich zurückgesetzt
+```
+cov  = min(1, total_worked_m2 / work_area_m2)   wie viel % des Felds tatsächlich bearbeitet
+dup  = duplicate_m2 / work_area_m2              wie viel % unnötig zweimal bearbeitet
+out  = outside_m2   / work_area_m2              wie viel % Fläche außerhalb der Grenze
+ret  = retread_m2   / total_worked_m2           wie viel % der EIGENEN Arbeit noch überfahren ist
+outt = Zeit außerhalb der Grenze / elapsed_s    wie viel % der Zeit außerhalb des Felds
+```
 
-Das Pflügen an der Position der Rückwärtsfahrt wird ungültig — der Bereich wird wieder als ungepflügt markiert.
-→ Es müssen effiziente Wendemuster auf Vorwärtsbasis (z. B. U-turn, Omega-Wende) entworfen werden.
+Jede Kennzahl wird zu einem **Erfüllungsgrad (0–1)**, der **kubiert** und mit der Punktzahl
+des Postens multipliziert wird.
 
-#### (2) Verlassen des Felds — Timer 10-fach beschleunigt
+```
+Postenpunkte = Punkte × Erfüllungsgrad³
 
-Solange sich der Traktor **außerhalb des Felds (Alpha-Grenze)** befindet, läuft der Simulations-Timer **10-mal schneller**.
-Aus Sicht der Teilnehmer bedeutet das: Jede Sekunde außerhalb des Felds entspricht 10 Sekunden auf der Zeitmessung.
+SCORE = 45·cov³ + 17·dup_a³ + 16·time_a³ + 7·out_a³ + 6·outt_a³ + 9·ret_a³
+```
 
-→ Beim Wenden im Vorgewende (headland), wenn die Route über die Feldgrenze hinausgeht, entsteht ein großer Zeitverlust. Wendemuster, die vollständig innerhalb der Feldgrenze abgeschlossen werden, sind vorteilhaft.
+| Posten | Kennzahl | Bestmarke | Null | Punkte |
+|--------|----------|-----------|------|--------|
+| Coverage | `cov` | 100% | 0% | **45** |
+| Duplicate | `dup` | ≤ 5% | ≥ 25% | **17** |
+| Time | `v_eff` | ≥ 3,5 km/h | ≤ 0,5 km/h | **16** |
+| Retread | `ret` | ≤ 5% | ≥ 20% | **9** |
+| Outside | `out` | 0% | ≥ 10% | **7** |
+| Outside Time | `outt` | 0% | ≥ 10% | **6** |
 
-#### (3) Pfadfolgefehler — fließt in das Ergebnis ein
+**Die dritte Potenz entscheidet.** Punkte kommen nur nahe der Bestmarke schnell dazu.
 
-Der während der Fahrt kumulierte **Pfadfolgefehler (Cross-Track Error, RMS)** wirkt sich nachteilig auf das Endergebnis aus.
+| Erfüllungsgrad | 0,5 | 0,7 | 0,8 | 0,9 | 0,95 | 1,0 |
+|----------------|-----|-----|-----|-----|------|-----|
+| Anteil der Punkte | 13% | 34% | 51% | 73% | 86% | 100% |
 
-Die App veröffentlicht in jedem Regelzyklus die Querabweichung (LTD) als Telemetrie und meldet
-nach Abschluss der Fahrt `track_complete` inklusive der verstrichenen Zeit. **Punktevergabe und
-Rangbildung übernimmt der Leaderboard-Server, nicht die App** — die genaue Formel inklusive
-Gewichtungsfaktor richtet sich nach der offiziellen Wettbewerbsordnung.
+Bei 62% Abdeckung bleibt man selbst mit nahezu perfekten übrigen Posten unter 60 Punkten.
+**Das Feld bis zum Ende zu füllen zählt mehr als alles andere.**
 
-→ Wenn Kurvenabschnitte zu dünn besetzt sind oder abrupte Heading-Wechsel auftreten, steigt der Pure Pursuit-Verfolgungsfehler stark an und das Ergebnis verschlechtert sich.
+#### Time sind keine Sekunden, sondern die effektive Arbeitsgeschwindigkeit
 
-##### Tipps zur Reduzierung des mittleren Fehlers
+Absolute Sekunden hängen von Feldgröße und Arbeitsbreite ab und sind nicht vergleichbar.
+Stattdessen wird **die Mindeststrecke zur Abdeckung dieses Felds (`D_ideal`) durch die
+tatsächlich benötigte Zeit geteilt**, was eine Geschwindigkeit ergibt.
 
-- **Gerade Abschnitte** müssen nicht dicht besetzt sein, der Höchstabstand beträgt jedoch **5 m** — größere Abstände führen zur Ablehnung der Datei (§4.4 Regel 3).
-- **Kurvenabschnitte** sollten ausreichend dicht besetzt sein — je größer die Krümmung, desto feiner die Unterteilung.
-- Heading-Änderungen zwischen benachbarten Waypoints klein halten (kein großer Winkelsprung auf einmal, z. B. unter 15°)
-- Es wird empfohlen, im eigenen Generator eine Validierungslogik für Heading-Sprünge einzubauen
+```
+R       = Mindestwendekreis des Traktors (compact 3,2 / medium 4,0 / large 4,9 m)
+W       = Arbeitsbreite des Anbaugeräts (m) — aus der Zeile `# implement` der CSV
+S       = kurze Seite des minimalen umschließenden Rechtecks des Kartenpolygons (m)
+N       = ceil(S / W)                              Anzahl der Überfahrten
 
-### 7.3 Siegerermittlung
+D_ideal = work_area_m2 / W + (N − 1) × π × R       (m)
+v_eff   = D_ideal / elapsed_s × 3,6                (km/h)
+```
 
-- **Gesamtzeit**, **Flächenanteil (Abdeckungsrate)** und **Pfadfolgefehler** fließen gemeinsam in die Punktzahl ein.
-- Es gibt **keinen** Mindest-Flächenanteil (z. B. 95%), den du erreichen musst.
-- Ein niedrigerer Flächenanteil wirkt sich jedoch nachteilig auf die Punktzahl aus — Zeitminimierung, Flächenanteil-Maximierung und mittlere Fehlerminimierung müssen **gemeinsam optimiert** werden.
-- Auch der Zeitanteil durch die 10-fache Beschleunigung bei Feldaustritt fließt in die Zeit ein.
-- Gewichtungen und Formeln wendet der Leaderboard-Server gemäß der offiziellen Wettbewerbsordnung an.
+`elapsed_s` ist `duration_ms / 1000` und **Sim-Zeit** — im Zeitraffer zu fahren verkürzt das
+Ergebnis also nicht.
 
-### 7.4 Bewertungsmethode
+Bestmarken-Zeiten je Karte für einen großen Traktor (`R = 4,9`) mit großem Pflug (`W = 3,6`):
 
-- Alle Bewertungen basieren auf **den im Server-Leaderboard erfassten Daten**.
-- Die Fahrt wird im Emulator mit **eingeschalteter REC-Aufzeichnung** gefahren; die nach Abschluss gespeicherte Fahraufzeichnung wird beim Leaderboard eingereicht.
-  Die Einreichungsdatei ist verschlüsselt und lässt sich nur mit dem Schlüssel der Organisatoren öffnen. Die zusätzlich erzeugte Klartext-CSV dient der eigenen Analyse.
-- Lokal gemessene Zeiten/Flächenanteile sind nur als Referenz zu betrachten — **offizielle Ergebnisse sind die Leaderboard-Werte**.
-- Das beste Ergebnis deines Teams im Leaderboard zum Ablauf der Frist ist das endgültige Bewertungsergebnis.
+| Karte | Fläche (m²) | `D_ideal` (m) | Bestmarken-Zeit |
+|-------|-------------|---------------|-----------------|
+| M1 Open Fields | 1.500 | 570,5 | **587 s** (9m47s) |
+| M2 Sloped Acres | 1.948 | 756,5 | **778 s** (12m58s) |
+| M3 Patchwork Plots | 1.355 | 576,6 | **593 s** (9m53s) |
+| M4 Crooked Bottoms | 1.879 | 737,5 | **759 s** (12m39s) |
 
-### 7.5 Fahrt- / Verbindungs- / Teamnamen-Regeln (strikt einzuhalten)
+Ein anderer Traktor oder ein anderes Anbaugerät ändert `R` und `W` — dann wird alles neu berechnet.
+
+### 7.3 Ungültige (INVALID) Fahrten
+
+Trifft **einer** der folgenden Punkte zu, wird keine Punktzahl gebildet und die Fahrt aus der
+Wertung genommen.
+
+| Bedingung | Erkennung |
+|-----------|-----------|
+| **Manuelles Fahren** | **Eine oder mehr** Telemetriezeilen mit `manual == 1` |
+| **Manuelle Tasteneingabe** | Ein Block `event_t_ms,edge,key` **existiert** |
+| **Anbaugerätewechsel** | **Zwei oder mehr** Zeilen `# implement` |
+| **Nicht bewertbar** | Keine Zeile `# work_area_m2` oder `# map` |
+
+Fasse während laufender REC-Aufzeichnung die Tastatur nicht an. Einmal ins Lenkrad greifen
+oder Gas bzw. Bremse antippen macht die gesamte Fahrt ungültig. Traktor- oder Gerätewechsel
+müssen **vor** dem Start der Aufzeichnung abgeschlossen sein.
+
+### 7.4 Abgeschaffte Regeln
+
+Diese Punkte weichen von früheren Angaben ab. **Die folgenden drei gelten nicht mehr.**
+
+| Abgeschaffte Regel | Aktueller Stand |
+|--------------------|-----------------|
+| **Rückwärtsfahrt setzt gepflügte Fläche zurück** | **Abgeschafft.** Die gemessene Rückwärts-Restfläche liegt nahe null, und die Kosten der Rückwärtsfahrt stecken bereits in Time und Duplicate |
+| **Timer läuft außerhalb des Felds 10-fach schneller** | **Entfällt.** Auch aus der App entfernt. Fläche außerhalb der Grenze zählt nun als **Outside**, die Zeit außerhalb als **Outside Time** |
+| **Mittlerer Pfadfehler wird am Ziel addiert** | **Kein Bewertungsposten.** Eine Formel wie `finalTimeS = elapsedS + penaltyS` existiert nicht |
+
+Der Pfadfolgefehler wird nicht direkt bewertet, aber ein großer Fehler trägt das Fahrzeug aus
+der Spur: `cov` sinkt, `dup` und `ret` steigen — **indirekt** kostet er also viel.
+
+### 7.5 Bewertungsmethode
+
+- Fahre im Emulator mit **eingeschalteter REC-Aufzeichnung** und reiche die gespeicherte Fahraufzeichnung beim Leaderboard ein.
+- Eingereicht wird die **versiegelte `.csv.enc`**, die sich nur mit dem Schlüssel der Organisatoren öffnen lässt. Die zusätzlich erzeugte Klartext-CSV dient der eigenen Analyse.
+- Lokal gemessene Zeiten und Flächen sind nur Referenz — **offiziell ist der Leaderboard-Wert**.
+- Punktzahlen pro Karte werden mit dem **Teamnamen** als Schlüssel summiert.
+
+> Für Punkteverteilung, Toleranzen und den genauen Einreichungsweg ist die Ankündigung der
+> Organisatoren maßgeblich. Die Zahlen hier sind aus den Leaderboard-Bewertungsregeln
+> übernommen; bei Änderungen gilt die Ankündigung.
+
+### 7.6 Fahrt- / Verbindungs- / Teamnamen-Regeln (strikt einzuhalten)
 
 > Bei Verstößen gegen die folgenden Regeln kann die betreffende Fahrt für ungültig erklärt werden. Bei wiederholten Verstößen droht die Disqualifikation.
 
@@ -543,6 +673,7 @@ Gewichtungsfaktor richtet sich nach der offiziellen Wettbewerbsordnung.
    ┌─→ [6] Mit upload_rddf.sh in die Cloud hochladen
    │        ↓
    │   [7] Im Emulator REC einschalten und fahren → verstrichene Zeit / gepflügte Fläche prüfen
+   │        (während der Aufzeichnung keine Tastatureingabe — eine genügt für INVALID)
    │        ↓
    │   [8] Gespeicherte Fahraufzeichnung beim Leaderboard einreichen → Aktualisierung prüfen
    │        ↓
@@ -573,19 +704,33 @@ Fragen sind nach Themen gruppiert. Das `(§N)` am Ende jeder Antwort verweist au
 
 > **F1.** Wird eine RDDF-Datei für alle Karten eingereicht oder für jede Karte separat?
 
-**Für jede Karte separat hochladen.** Der Wettbewerb verwendet drei öffentliche Karten M1, M2 und M3. Für jede Karte wird die zugehörige RDDF-Datei separat hochgeladen (dateiweise angegeben, z. B. `upload_rddf.sh -f ./1.rddf` — einen mapId-Parameter gibt es nicht). Punktzahlen pro Karte werden mit dem **Teamnamen** als Schlüssel summiert. (§4.5, §7.5)
+**Für jede Karte separat hochladen.** Der Wettbewerb hat vier Karten — M1, M2 und M3 öffentlich, M4 hidden. Für jede Karte wird die zugehörige RDDF-Datei separat hochgeladen (dateiweise angegeben, z. B. `upload_rddf.sh -f ./1.rddf` — einen mapId-Parameter gibt es nicht). Punktzahlen pro Karte werden mit dem **Teamnamen** als Schlüssel summiert. (§4.5, §7.5)
 
 ---
 
 > **F2.** Muss der Flächenanteil 100 % erreichen, um zu gewinnen?
 
-**Nein — es gibt keinen Mindest-Flächenanteil.** Da der Flächenanteil jedoch proportional in die Punktzahl einfließt, ist ein Team mit höherem Flächenanteil bei gleicher Zeit im Vorteil. Die **Balance zwischen Zeit und Flächenanteil** ist der Kern der Strategie.
+**Es gibt keine Schwelle, die du überschreiten musst.** Coverage hat mit 45 Punkten aber die
+größte Gewichtung, und der Erfüllungsgrad wird **kubiert** — eine niedrige Abdeckung lässt die
+Punktzahl einbrechen.
+
+| Abdeckung | Erhaltene Punkte (von 45) |
+|----------:|--------------------------:|
+| 50% | 5,6 |
+| 70% | 15,4 |
+| 90% | 32,8 |
+| 100% | 45,0 |
+
+Etwas mehr Zeit aufzuwenden und das Feld bis zum Ende zu füllen zahlt sich fast immer aus. (§7.2)
 
 ---
 
 > **F3.** Gibt es ein separates „finales Einreichungs"-Verfahren?
 
-**Nein.** Das beste Ergebnis deines Teams im Leaderboard zum Ablauf der Deadline ist direkt das Bewertungsergebnis. Lade bis zur Deadline weiter hoch und fahre Runden, um dein Ergebnis zu verbessern. (§7.4)
+Du musst für jede Fahrt die **REC-Aufzeichnung (die versiegelte `.csv.enc`) beim Leaderboard
+einreichen**, damit sie zählt. Das Einreichen ist die Ergebnisaktualisierung. Was zum Ablauf
+der Deadline im Leaderboard steht, wird bewertet — halte also die Schleife aus Hochladen,
+Fahren und Einreichen bis dahin am Laufen. (§7.5)
 
 ---
 
@@ -622,35 +767,62 @@ die Maschine kann zur Laufzeit ihre Kriechgrenze anwenden. (§4.2, §4.4)
 
 > **F7.** Ist eine Route mit viel Overlap vorteilhaft?
 
-**Nein, sie ist nachteilig.** Overlap selbst führt zu keinem Punktabzug, verlängert aber die Fahrzeit — das ist im Zeitwettbewerb ein Nachteil. Entwirf eine möglichst effiziente Coverage-Route.
+**Sie ist nachteilig — und wird direkt abgezogen.** Boden, der die Fertigstellungsschwelle
+bereits überschritten hat, erneut zu überfahren zählt als **Duplicate** mit 17 Punkten.
+
+- Bis zu **5% der Feldfläche geben die volle Punktzahl** — etwas Überlappung der Arbeitsbreite ist normale Praxis gegen unbearbeitete Streifen
+- Ab **25% gibt es null Punkte**
+- Dazwischen wird der Erfüllungsgrad kubiert, sodass schon 10% teuer sind
+
+`Time` leidet ebenfalls — ein doppelter Verlust. (§7.2)
 
 ---
 
-> **F8.** Ist Rückwärtsfahrt beim Wenden absolut verboten?
+> **F8.** Darf ich beim Wenden rückwärts fahren?
 
-**Nur Rückwärtsfahrt innerhalb der gepflügten Fläche (Pflug abgesenkt)** löst den Penalty für den Reset ungepflügter Bereiche aus.
+**Ja. Die eigene Rückwärts-Penalty wurde abgeschafft.** (§7.4)
 
-- OK: Rückwärtsfahrt im Vorgewende-Bereich (`implementFlag=0`) — kein Penalty für ungepflügte Bereiche
-- NG: Trotzdem in der Regel ineffizient wegen Zeitverlust und schwieriger Heading-Umkehr-Behandlung
+Lohnend ist es allerdings selten.
+
+- Jeder Wechsel vorwärts↔rückwärts **hält das Fahrzeug vollständig an** und beschleunigt neu — reiner Zeitverlust → schlechteres `Time`
+- Der zurückgefahrene Abschnitt ist bereits bearbeiteter Boden, was `Duplicate` und `Retread` erhöht
+- `implementFlag` muss in jedem Rückwärtsabschnitt `0` sein (§4.3)
+
+Ziehe es nur als Alternative zur Dreipunktwende in Betracht, wenn das Feld für einen
+Halbkreis-U-turn zu schmal ist.
 
 ---
 
 > **F9.** Eine große U-Kurve außerhalb des Felds ist praktisch — wie groß ist die Penalty?
 
-**Solange der Traktor außerhalb der Feldgrenze ist, läuft der Timer 10-mal schneller.** Beispiel: 3 Sekunden Wenden außerhalb des Vorgewindes ergeben 30 Sekunden Zeitzuschlag. Schließe U-turns so weit wie möglich innerhalb des Felds ab. (§7.2)
+**Einen 10-fach-Timer gibt es nicht.** Stattdessen wird über zwei getrennte Posten abgezogen.
+
+| Posten | Kennzahl | Null bei | Punkte |
+|--------|----------|----------|--------|
+| Outside | Fläche außerhalb der Grenze ÷ Feldfläche | 10% | 7 |
+| Outside Time | Zeit außerhalb ÷ Gesamtzeit | 10% | 6 |
+
+Beide geben **nur bei 0% die volle Punktzahl** — sie gelten als reine Defekte, zu denen dich
+nichts zwingt. Die 13 Punkte zusammen sind überschaubar, aber Wenden außerhalb kostet auch
+Zeit, sodass `Time` mitleidet. Die Wende innerhalb der Grenze abzuschließen ist die bessere
+Wahl. (§7.2)
 
 ---
 
-> **F10.** Wie stark wirkt sich der mittlere Fehler auf das Ergebnis aus?
+> **F10.** Wie stark wirkt sich der Pfadfolgefehler auf die Punktzahl aus?
 
-Je größer der mittlere Fehler, desto schlechter das Ergebnis. Den Gewichtungsfaktor wendet
-der Leaderboard-Server an — die genaue Formel steht in der offiziellen Wettbewerbsordnung.
+**Er ist kein Bewertungsposten.** Auf den Fehler selbst entfallen keine Strafsekunden. (§7.4)
+
+Der indirekte Effekt ist jedoch groß. Trägt es das Fahrzeug aus der Spur, bleiben Zellen
+unbearbeitet (`cov` sinkt), es gerät in die Nachbarspur und bearbeitet Bekanntes erneut
+(`dup` steigt), und die Räder stehen auf bearbeitetem Boden (`ret` steigt). Auf diese Posten
+entfallen zusammen 45 + 17 + 9 = 71 Punkte.
 
 In der App sichtbar sind der Wert **LTD (Querabweichung)** im Dashboard und die Spalte `cte`
 in `/tmp/pp_trace.csv`. Wenn sich dieser Wert in einem Kurvenabschnitt kontinuierlich zu
 einer Seite aufbaut, hat dieser Abschnitt die Nachführgrenze des Fahrzeugs überschritten.
 
-→ Lässt sich durch höhere **Waypoint-Dichte in Kurvenabschnitten** und **Minimierung von Heading-Sprüngen** reduzieren. (§7.2, §10.6)
+→ Lässt sich durch höhere **Waypoint-Dichte in Kurvenabschnitten** und **Minimierung von Heading-Sprüngen** reduzieren. (§10.6)
 
 ---
 
@@ -664,13 +836,13 @@ einer Seite aufbaut, hat dieser Abschnitt die Nachführgrenze des Fahrzeugs übe
 - NG: Zwei Instanzen mit demselben Teamnamen laufen gleichzeitig auf M1
 - NG: Mehrere Browser-Tabs, die sich mit derselben App-Instanz verbinden
 
-(§7.5)
+(§7.6)
 
 ---
 
 > **F12.** Darf ich den Teamnamen zwischendurch ändern?
 
-**Nicht empfohlen.** Da der Teamname der Schlüssel für die kartenübergreifende Punktesummierung ist, führt bereits **ein einziges abweichendes Zeichen** dazu, dass das Team als separates Team erkannt und die Punkte getrennt werden. Lege den Teamnamen vor der ersten Fahrt fest und verwende denselben exakten String bei allen Karten und allen Fahrten. (§7.5)
+**Nicht empfohlen.** Da der Teamname der Schlüssel für die kartenübergreifende Punktesummierung ist, führt bereits **ein einziges abweichendes Zeichen** dazu, dass das Team als separates Team erkannt und die Punkte getrennt werden. Lege den Teamnamen vor der ersten Fahrt fest und verwende denselben exakten String bei allen Karten und allen Fahrten. (§7.6)
 
 ---
 
@@ -755,15 +927,18 @@ Algorithmus identisch. Das Einzige, was sich ändert, ist `update()`.
 
 ### 10.4 Wie der Standard-Tracker den Lenkwinkel bestimmt
 
-Trotz des Namens ist es eine **gewichtete Summe aus fünf Termen**; die reine
-Pure-Pursuit-Geometrie trägt nur 45 % bei.
+Trotz des Namens ist es eine **gewichtete Summe aus fünf Termen**. Die Standardwerte sind so
+gesetzt, dass der **Pure-Pursuit-Term führt (Gewicht 0,7) und der Rest nur nachjustiert**.
+Pure Pursuit korrigiert Querabweichung und Kursfehler bereits gemeinsam; zieht man die
+Hilfsverstärkungen gleich hoch, wird derselbe Fehler dreifach korrigiert, die Lenkung hängt
+am Anschlag und es entsteht das S-Pendeln.
 
 | Term | Aufgabe |
 |------|---------|
 | Krümmungs-Vorsteuerung | Lenkung, die die Krümmung des Pfades selbst verlangt (fehlerunabhängig) |
 | Kursfehler | Richtet das Fahrzeug an der Pfadtangente aus |
 | Querabweichung | Zieht das Fahrzeug zurück auf den Pfad. Auf Bahnen gemessen an der **um 1,5 s vorausberechneten Position**, in Wenden an der aktuellen Position |
-| Pure Pursuit | Kreisbogen zum Vorausschaupunkt — zuständig für Laufruhe (Gewicht 0,45) |
+| Pure Pursuit | Kreisbogen zum Vorausschaupunkt — **die Hauptlenkung** (`ppWeightPp`, Standard **0,7**) |
 | Gierraten-Dämpfung | Unterdrückt Schwingungen, wenn die Terme oben überreagieren |
 
 ### 10.5 ★ Eigenschaften mit direktem Einfluss auf den RDDF-Entwurf
@@ -776,8 +951,8 @@ Das ist der praktischste Teil dieses Abschnitts.
 | Krümmung als gewichteter Mittelwert über **5 aufeinanderfolgende Punkte** um den nächstgelegenen geschätzt | Zu weite Waypoint-Abstände verschlechtern die Schätzung, sodass Bögen untersteuert werden (§4.4 Regel 4) |
 | Das Anbaugerät läuft **3 m hinter** dem Fahrzeug | `implementFlag`-Wechsel greifen, wenn das Gerät die Stelle passiert — plane an Bahnanfang und -ende etwa 3 m Reserve ein |
 | Verfolgung startet erst **innerhalb von 3 m um Waypoint 0** | Setze den ersten Waypoint auf Punkt A der Karte (§4.4) |
-| Ein Wechsel vorwärts↔rückwärts **bremst bis zum Stillstand** | Jeder Richtungswechsel kostet einen kompletten Stopp plus Wiederanfahren. Rückwärtsfahren macht gepflügten Boden zudem ungültig (§7.2) — vorwärtsbasierte Wenden gewinnen |
-| Abschluss = **innerhalb 1 m** um den letzten Waypoint + Fortschritts-Gate | Mache den letzten Waypoint zu einem eindeutigen Endpunkt |
+| Ein Wechsel vorwärts↔rückwärts **bremst bis zum Stillstand** | Jeder Richtungswechsel kostet einen kompletten Stopp plus Wiederanfahren, was direkt von `Time` abgeht — vorwärtsbasierte Wenden gewinnen (§7.2) |
+| Abschluss = **innerhalb 1 m** um den letzten Waypoint **und** innerhalb der letzten 10 Waypoints | Mache den letzten Waypoint zu einem eindeutigen Endpunkt |
 | Der Fortschritt läuft nie zurück, auch wenn sich der Pfad selbst schneidet | Muster mit übersprungenen Bahnen sind unbedenklich |
 
 ### 10.6 Verhalten lokal beobachten
