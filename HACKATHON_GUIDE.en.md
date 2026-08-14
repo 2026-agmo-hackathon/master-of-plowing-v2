@@ -9,13 +9,12 @@
 
 - **Mission**: Control a virtual tractor to plow the **"Alpha"** field with the **shortest time + maximum coverage**
 - **Hard constraint**: Maximum driving speed **7 km/h** (an RDDF value above 7 km/h is rejected, never silently clamped)
-- **Penalties (3 types)**
-  - **Reverse in the plowed area** — the plowed state at that location is reset (unplowed)
-  - **Leaving the field** — the timer runs **10× faster** while outside the boundary
-  - **Cumulative path error at finish** — the cumulative Cross-Track Error (RMS) is added to the final time
-- **Evaluation**: Both **elapsed time** and **coverage rate (minimizing unplowed area)** contribute to the score.
-  - There is **no hard cutoff** such as 95% — you may submit a result at any coverage rate
-  - However, a lower coverage rate penalizes your score proportionally
+- **Scoring**: a single REC-recorded CSV of the run produces a score **out of 100**.
+  - Six items — **Coverage 45 · Duplicate 17 · Time 16 · Retread 9 · Outside 7 · Outside Time 6**
+  - Each item's achievement (0–1) is **cubed** before it is multiplied by the item's points, so points accrue quickly only near a perfect score
+  - Example: 50% coverage earns **5.6** of the 45 Coverage points (0.5³ = 12.5%)
+  - There is **no hard cutoff** such as 95% — a score is produced at any coverage rate
+- **INVALID**: manual driving, keyboard input, or changing the implement mid-run means **no score at all**
 
 > **Key point**: What participants write and submit is the **RDDF (Route/Road Definition Data File)**.
 > The tractor control algorithm itself is handled by the provided skeleton; participants express the **optimal route for plowing the field** as an RDDF and submit it.
@@ -29,6 +28,7 @@
 | **SeamOS IDE (FeatureDesigner)** | Use the version distributed by the organizers |
 | **Claude Code** | Install the latest version from the official site |
 | **SeamOS Everywhere** | Use the version distributed by the organizers |
+| **SeamOS World (emulator)** | The environment where you actually drive and inspect an RDDF. Use the local install or `seamosworld.seamos.io` |
 
 
 ---
@@ -37,14 +37,19 @@
 
 ```
 master_of_plow/
-├── com.bosch.fsp.master_of_plow/   # FSP (Feature Spec Project)
-├── master_of_plow_app/             # App body (C++ code, config)
-│   └── src-gen/AppMain/tracking/   # Path-tracking skeleton — read-only reference (§10)
-├── master_of_plow_CPP_SDK/         # SeamOS C++ SDK (provided)
-├── customui-src/                   # Dashboard source (React + Vite)
-├── rddf/                           # RDDF area for participants to write/validate
-├── docs/                           # Run orchestration and FIF validation notes
-└── HACKATHON_GUIDE.md              # This document
+├── com.bosch.fsp.master_of_plow/            # FSP (Feature Spec Project)
+├── com.bosch.fsp.master_of_plow.gen/        # Artifacts generated from the FSP
+├── com.bosch.fsp.master_of_plow.gen.tests/  # Generated test artifacts
+├── master_of_plow_app/                      # App body (C++ code, config)
+│   ├── src-gen/AppMain/tracking/            # Path-tracking skeleton (§10)
+│   └── tests/                               # Local test modules
+├── master_of_plow_CPP_SDK/                  # SeamOS C++ SDK (provided)
+├── customui-src/                            # Dashboard source (React + Vite)
+├── rddf/                                    # RDDF area for participants to write/validate
+├── docs/                                    # Run orchestration and FIF validation notes
+├── distribution/                            # Distribution artifacts
+├── seamos-assets/                           # Marketplace images and other assets
+└── HACKATHON_GUIDE.md                       # This document (en · de · th translations included)
 ```
 
 ### 3.1 Opening in SeamOS IDE
@@ -91,6 +96,10 @@ It is the essential deliverable that participants submit in the competition, and
 
 **9 columns** separated by tabs (`\t`), one waypoint per line:
 
+> The parser also accepts a **7-column form** without the leading `lineNo` and
+> `index` (`RddfParser.cpp`). This guide and the sample files use 9 columns, which
+> is what we recommend.
+
 ```
 lineNo  index  lat         lon          res1  res2  res3  speed  implementFlag
 1       1      35.8000317  126.8807033  0.0   0.0   0.0   3.00   1
@@ -114,8 +123,7 @@ lineNo  index  lat         lon          res1  res2  res3  speed  implementFlag
 
 - `0 < speed ≤ 7.0` — forward; values below `2.05 km/h` load with a sustainable-speed warning
 - `speed = 0` — an explicit stop waypoint
-- `-7.0 ≤ speed < 0` — reverse (incurs the competition penalty below); magnitudes below `2.05 km/h` warn
-- `speed < 0` — reverse (incurs competition penalty: plowed state reset at that location)
+- `-7.0 ≤ speed < 0` — reverse. There is no reverse-specific penalty, but the stop/re-accelerate time and the duplicated work cost you points (§7.4); magnitudes below `2.05 km/h` warn
 - When the speed sign changes between adjacent waypoints, this is a **gear change point** — waypoints must be arranged so that the heading (direction of travel) reverses
 
 ### 4.3 implementFlag
@@ -123,17 +131,27 @@ lineNo  index  lat         lon          res1  res2  res3  speed  implementFlag
 - While plowing on a lane: `1`
 - While turning on the headland (field edge): `0`
 - **All reverse segments must be `0`** — do not plow while reversing.
+- Even during a headland turn, an implement passing over already-worked ground counts as `Retread` (§7.2)
 
 ### 4.4 Automatic Validation
 
 RDDF is automatically validated as soon as it is received from the cloud. Format errors and safety-ceiling violations are **rejected and not saved**; physical tracking limitations load unchanged with warnings. The validation logic is defined in `RddfValidator.cpp`.
 
-| Rule | Description | On violation |
-|------|-------------|--------------|
-| **(1) Empty file** | Zero waypoints | Reject |
-| **(2) Speed envelope** | `\|speed\| ≤ 7.0 km/h`; a nonzero magnitude below `2.05 km/h` may be unsustainable | Reject above the ceiling; load low-speed input unchanged and warn |
-| **(3) Waypoint spacing** | Consecutive points satisfy the documented minimum/maximum spacing | Reject with the offending waypoint pair |
-| **(4) Physical curvature** | Compare local geometry with the measured steering limit | Load unchanged and warn about the tracking limit |
+| Check | Description | On violation |
+|-------|-------------|--------------|
+| **Empty file** (Rule 4) | Zero waypoints | Reject |
+| **Value validity** | `lat`, `lon` and `speed` must be finite (no NaN or inf) | Reject, naming the waypoint index |
+| **implementFlag** | Only `0` or `1` is accepted | Reject, naming the actual value and waypoint index |
+| **Speed ceiling** | `\|speed\| ≤ 7.0 km/h` | Reject above the ceiling |
+| **Speed floor** | A nonzero magnitude below `2.05 km/h` | Load unchanged and warn |
+| **Waypoint spacing** (Rule 3) | Distance between consecutive points is **at least 0.05 m and at most 5.0 m** | Reject, naming the offending waypoint pair and the actual distance |
+| **Physical curvature** (Rule 6) | Curvature measured from the heading change over three consecutive points, compared against the vehicle's minimum turning radius (about **4.35 m**) | Load unchanged and warn about the tracking limit |
+
+> The constants live in `RddfValidator.hpp`: `MIN_WAYPOINT_SPACING_M = 0.05`,
+> `MAX_WAYPOINT_SPACING_M = 5.0`, `MAX_MACHINE_SPEED_KMH = 7.0`,
+> `MIN_MACHINE_SPEED_KMH = 2.05`; the minimum turning radius is computed as
+> `WHEELBASE_M / tan(WHEEL_MAX_RAD)` straight from the tracker constants.
+> Rejection **stops at the first violation**, so only one reason is reported at a time.
 
 #### Behavior on rejection
 
@@ -154,96 +172,76 @@ pose with waypoint 0. Keep the map spawn and the first waypoint aligned.
 
 ### 4.5 Map Information (Field Maps)
 
-The competition uses **3 public maps (M1, M2, M3)**. Each map's polygon (field boundary) is defined in WGS84 `lat, lon` coordinates, and participants' RDDFs should cover as much of the polygon interior as possible.
+The competition uses **three maps (M1, M2, M3)**. All three share the **same GPS origin — `37.5665, 126.978`**.
 
-| Map | Name | Origin (lat, lon) | Area | Vertices |
-|-----|------|-------------------|------|----------|
-| **M1** | Open Fields | 35.8000, 126.8800 | 1,500 m² | 4 |
-| **M2** | Sloped Acres | 34.6800, 126.9100 | 1,948 m² | 37 |
-| **M3** | Patchwork Plots | 35.4200, 127.3900 | 1,355 m² | 54 |
+| Map | id | Name | Map size | Drivable (driveArea) | Scored (workArea) |
+|-----|----|------|----------|----------------------|-------------------|
+| **M1** | `agri-1-plain` | Open Fields | 88 × 80 m | 3,187 m² | **1,499 m²** |
+| **M2** | `agri-2-sloped` | Sloped Acres | 80 × 80 m | 2,132 m² | **1,947 m²** |
+| **M3** | `agri-3-patch` | Patchwork Plots | 72 × 80 m | 1,575 m² | **1,356 m²** |
 
-> Origin is the GPS reference point corresponding to local (0, 0) of the polygon (for reference only); area is the m² value calculated using the shoelace formula.
+Only the inside of `workArea` is scored. `driveArea` is the drivable limit; beyond it lies a
+1.4 m deep ditch — **once a wheel drops in, the tractor cannot get itself out.** All three maps
+are completely flat.
 
-#### M1 · Open Fields (1,500 m², 4 vertices)
+#### Start position — align waypoint 0 with this
+
+| Map | Start (lat, lon) | Heading | World (x, z) |
+|-----|------------------|---------|--------------|
+| **M1** | `37.5663023, 126.9780595` | `32.3°` | 5.25, 21.85 |
+| **M2** | `37.5665036, 126.9783060` | `-48.1°` | 27.0, -0.4 |
+| **M3** | `37.5662952, 126.9782923` | `-17.5°` | 25.79, 22.64 |
+
+- Heading is **0° = north, clockwise** (`forward = (sin h, -cos h)`).
+- The start coordinate is the **contact point of the rear-right wheel**, not the vehicle centre.
+  Switch tractor size class and the rear-right wheel still lands exactly here.
+- Motion authority is granted only once the live vehicle pose matches waypoint 0 (§4.4).
+
+#### Converting world coordinates to lat/lon
+
+Polygons in the map document are written in world `[x, z]` metres (**+x = east / -z = north**).
+An RDDF needs lat/lon, so convert like this.
+
+```
+lat = 37.5665 - z / 110540
+lon = 126.978 + x / (111320 x cos(37.5665°))
+```
+
+> Using `111320` for latitude shifts every scoring cell by 0.7%. Latitude **must** use
+> **`110540`**. The leaderboard inverts the same formula onto 0.5 m scoring cells.
+
+#### M1 · Open Fields
 
 ![M1 Open Fields](docs/maps/map1_polygon.png)
 
-The simplest rectangular field. Ideal for quickly validating a boustrophedon algorithm.
+The simplest rectangular field — ideal for quickly validating a boustrophedon algorithm.
 
-```
-polygon = [
-  (35.8002897, 126.8806012), (35.8004622, 126.8802035),
-  (35.8001628, 126.8800000), (35.8000000, 126.8803803),
-]
-```
-
-#### M2 · Sloped Acres (1,948 m², 37 vertices)
+#### M2 · Sloped Acres
 
 ![M2 Sloped Acres](docs/maps/map2_polygon.png)
 
-A complex polygon simulating a sloped field. The headland area is long, making U-turn handling tricky.
+A complex 37-vertex polygon. Despite the name there is no slope. The long headland makes
+U-turn handling awkward.
 
-```
-polygon = [
-  (34.6805868, 126.9102540), (34.6804636, 126.9100401),
-  (34.6804514, 126.9100264), (34.6804341, 126.9100117),
-  (34.6804101, 126.9100000), (34.6803773, 126.9100074),
-  (34.6803447, 126.9100296), (34.6803099, 126.9100506),
-  (34.6802487, 126.9100895), (34.6801798, 126.9101240),
-  (34.6800194, 126.9101844), (34.6800025, 126.9101929),
-  (34.6800000, 126.9102047), (34.6800011, 126.9102220),
-  (34.6800076, 126.9102429), (34.6800240, 126.9102651),
-  (34.6800455, 126.9102861), (34.6800750, 126.9103133),
-  (34.6801236, 126.9103631), (34.6801328, 126.9103724),
-  (34.6801435, 126.9103860), (34.6801583, 126.9104057),
-  (34.6801838, 126.9104396), (34.6802037, 126.9104747),
-  (34.6802139, 126.9104994), (34.6802247, 126.9105198),
-  (34.6802354, 126.9105480), (34.6802425, 126.9105771),
-  (34.6802543, 126.9106086), (34.6802578, 126.9106314),
-  (34.6802619, 126.9106436), (34.6802696, 126.9106499),
-  (34.6802767, 126.9106461), (34.6802850, 126.9106363),
-  (34.6803441, 126.9105654), (34.6803610, 126.9105499),
-  (34.6803819, 126.9105290),
-]
-```
-
-#### M3 · Patchwork Plots (1,355 m², 54 vertices)
+#### M3 · Patchwork Plots
 
 ![M3 Patchwork Plots](docs/maps/map3_polygon.png)
 
-An irregular field with a mix of concave and convex sections. A simple boustrophedon leaves significant unplowed areas, so polygon clipping and per-sub-region processing are required.
+An irregular field mixing concave and convex edges (54 vertices). A plain boustrophedon leaves
+a lot unplowed, so you need polygon clipping and per-region handling.
 
-```
-polygon = [
-  (35.4205363, 127.3902241), (35.4205148, 127.3901085),
-  (35.4205020, 127.3900000), (35.4202816, 127.3900305),
-  (35.4202305, 127.3900267), (35.4201433, 127.3900066),
-  (35.4201374, 127.3900667), (35.4201845, 127.3900979),
-  (35.4202004, 127.3901073), (35.4202145, 127.3901207),
-  (35.4202350, 127.3901547), (35.4202510, 127.3901941),
-  (35.4202633, 127.3902458), (35.4202652, 127.3902776),
-  (35.4202611, 127.3903620), (35.4201999, 127.3903605),
-  (35.4201579, 127.3903998), (35.4201428, 127.3904155),
-  (35.4201145, 127.3904243), (35.4200712, 127.3904327),
-  (35.4200707, 127.3904499), (35.4200667, 127.3904538),
-  (35.4200640, 127.3904632), (35.4200598, 127.3904727),
-  (35.4200525, 127.3904733), (35.4200484, 127.3904905),
-  (35.4200105, 127.3904933), (35.4200014, 127.3905578),
-  (35.4200000, 127.3905707), (35.4200178, 127.3905879),
-  (35.4200319, 127.3906068), (35.4200430, 127.3906307),
-  (35.4200766, 127.3906202), (35.4201037, 127.3906140),
-  (35.4201269, 127.3906073), (35.4201511, 127.3905483),
-  (35.4201598, 127.3905333), (35.4201770, 127.3905294),
-  (35.4202127, 127.3905333), (35.4202578, 127.3905433),
-  (35.4202830, 127.3904800), (35.4202971, 127.3904454),
-  (35.4203168, 127.3904127), (35.4203341, 127.3903826),
-  (35.4203501, 127.3903605), (35.4203743, 127.3903364),
-  (35.4203994, 127.3903132), (35.4204189, 127.3902909),
-  (35.4204427, 127.3902630), (35.4204637, 127.3902486),
-  (35.4204810, 127.3902407), (35.4205012, 127.3902347),
-  (35.4205213, 127.3902308), (35.4205394, 127.3902358),
-]
-```
+#### Detailed specification documents
+
+Full polygon coordinates, surface properties and tractor specs live in separate documents.
+
+| Document | Contents |
+|----------|----------|
+| [maps.md](docs/hackathon-2026/maps.md) | Map sizes, GPS origin, **full `workArea`/`driveArea` polygon coordinates**, tillage scoring basis (0.2 m cells, 0.999 completion) |
+| [terrain.md](docs/hackathon-2026/terrain.md) | Surface friction, traction limits and tillage-resistance formulas with values |
+| [tractor-specs.md](docs/hackathon-2026/tractor-specs.md) | Physical specs of the three tractors (small · medium · large) |
+| [rddf-format.md](docs/hackathon-2026/rddf-format.md) | RDDF format specification |
+| [signal-flow.md](docs/hackathon-2026/signal-flow.md) | How your app receives sensor signals and sends commands |
+| [system-requirements.md](docs/hackathon-2026/system-requirements.md) | Participant PC requirements |
 
 ---
 
@@ -257,7 +255,8 @@ master_of_plow/rddf/
 ├── 2.rddf                  # Route for field 2
 ├── 3.rddf                  # Route for field 3
 ├── upload_rddf.sh          # Cloud upload script
-└── how-to-upload-rddf.md   # Upload command reference
+├── how-to-upload-rddf.md   # Upload command reference
+└── README.md               # File conventions and validation behaviour
 ```
 
 ### 5.2 Writing an RDDF by Hand
@@ -276,29 +275,51 @@ For the simplest approach, open a text editor and write tab-delimited data direc
 
 Writing dozens to hundreds of waypoints by hand is impractical. The typical approach is to write a script that takes the **field geometry + algorithm parameters** (lane spacing, turn radius, etc.) as input and generates the RDDF. Any language works — this guide provides Python examples.
 
-#### Example: Boustrophedon (back-and-forth) + semicircular U-turn
+#### Example: skip-lane boustrophedon + semicircular U-turn
 
-Divide the field into parallel lanes spaced by SWATH (implement width), traverse alternating even/odd lanes, and at each end enter the next lane via a **forward semicircular U-turn**. Because no reversing is used, the **unplowed-reset penalty is avoided**.
+Divide the field into parallel lanes spaced by SWATH (implement width) and enter the
+next lane at each end via a **forward semicircular U-turn**. Avoiding reverse saves the
+stop-and-re-accelerate time.
+
+**A plain back-and-forth into the adjacent lane is impossible.** That semicircle has a
+radius of `SWATH / 2`, which at SWATH = 4 m is 2 m — well below the vehicle's minimum
+turning radius of **4.35 m**. The steering goes to full lock and the vehicle still runs
+wide of the corner.
+
+So the turns **skip lanes**. Turning into a lane `d` lanes away gives a radius of
+`d × SWATH / 2`, and that must be at least 4.35 m on every turn.
+
+Visiting the **front half and back half of the lanes alternately** guarantees this. With
+7 lanes the visiting order is `0, 4, 1, 5, 2, 6, 3`; the gaps are 4, 3, 4, 3, 4, 3, so
+even the tightest turn has a radius of `3 × 4 / 2 = 6 m`.
 
 ```
-↑ Lane 0       U-turn ↓ Lane 1       U-turn ↑ Lane 2  ...
-│             ╲          │            ╱          │
-│              ╲         │           ╱           │
-│       semicircle U-turn │   semicircle U-turn   │
+lane:   0    1    2    3    4    5    6
+order:  1    3    5    7    2    4    6
+        └──── front half ────┘└─ back half ─┘
+
+  ↑ lane 0 ─────────╮
+                    │  radius = (lane gap) × SWATH / 2  ≥ 4.35 m
+  ↓ lane 4 ─────────╯
 ```
+
+The smallest gap equals `front-half lane count − 1`, so this pattern requires the field
+to be wider than `SWATH × (2 × 4.35 / SWATH + 1)`. On a narrower field a semicircular
+U-turn is not usable at all, and you have to consider an omega turn that leaves the
+boundary (→ Outside deductions) or a three-point turn (→ a reverse segment).
 
 #### Minimal working example (`gen_rddf.py`)
 
 ```python
 """
-gen_rddf.py — Example boustrophedon pattern RDDF generator
-Participants should use this script as a starting point and evolve it with their own algorithm.
+gen_rddf.py - skip-lane boustrophedon RDDF generator example
+Use this as a starting point and evolve it into your own algorithm.
 """
 
 import math
 
-# --- Field origin (bottom-left) and lat/lon conversion ---
-LAT0, LON0 = 35.8001, 126.8807
+# --- Field origin and lat/lon conversion (all three contest maps share it) ---
+LAT0, LON0 = 37.5665, 126.978
 M_PER_DEG_LAT = 110540.0
 M_PER_DEG_LON = 111320.0 * math.cos(math.radians(LAT0))
 
@@ -306,59 +327,96 @@ def to_latlon(x_m, y_m):
     return (LAT0 + y_m / M_PER_DEG_LAT,
             LON0 + x_m / M_PER_DEG_LON)
 
-# --- Parameters ---
-FIELD_W = 30.0     # Field width E-W (m)
-FIELD_H = 50.0     # Field height N-S (m)
-SWATH   = 4.0      # Lane spacing = implement width (m)
-STEP    = 1.0      # Waypoint interval (m)
-V_LANE  = 3.0      # Lane speed (km/h)
-V_TURN  = 1.5      # Turn speed (km/h)
-N_ARC   = 16       # Number of segments for U-turn semicircle
+# --- Vehicle physical limits (same values as RddfValidator) ---
+MIN_TURN_R  = 4.35     # WHEELBASE_M 2.05 / tan(WHEEL_MAX_RAD 0.44)
+MAX_SPACING = 5.0      # max spacing between waypoints (over this the file is rejected)
 
-waypoints = []  # (x, y, speed, implementFlag)
-r = SWATH / 2.0
+# --- Parameters ---
+FIELD_W = 30.0     # field width, east-west (m)
+FIELD_H = 50.0     # field length, north-south (m)
+SWATH   = 4.0      # lane spacing = plow width (m)
+STEP    = 1.0      # waypoint spacing (m) - must be <= MAX_SPACING
+V_LANE  = 3.0      # lane speed (km/h)
+V_TURN  = 2.5      # turn speed (km/h) - at or above the 2.05 creep floor
+N_ARC   = 16       # segments per U-turn semicircle
+
+assert STEP <= MAX_SPACING
+
 n_lanes = int((FIELD_W - SWATH) // SWATH) + 1
 
-for k in range(n_lanes):
-    x = SWATH / 2.0 + k * SWATH
-    going_up = (k % 2 == 0)
+# Turning straight into the adjacent lane gives a radius of SWATH/2, below the
+# minimum. Alternating the front half with the back half keeps every gap at
+# (half - 1) lanes or more.
+half = (n_lanes + 1) // 2
+order = []
+for i in range(half):
+    order.append(i)
+    if i + half < n_lanes:
+        order.append(i + half)
 
-    # (1) Straight lane — implement ON
-    y0, y1 = (r, FIELD_H - r) if going_up else (FIELD_H - r, r)
+# Smallest turn radius used, and how far the semicircles reach beyond the lanes.
+MIN_R_USED = (half - 1) * SWATH / 2.0
+HEADLAND   = half * SWATH / 2.0
+assert MIN_R_USED >= MIN_TURN_R, (
+    f"field too narrow: turn radius {MIN_R_USED:.2f} m < {MIN_TURN_R} m")
+
+# Leave a headland at each end so the semicircles stay inside the field.
+Y_LO, Y_HI = HEADLAND, FIELD_H - HEADLAND
+
+waypoints = []  # (x, y, speed, implementFlag)
+lane_x = lambda k: SWATH / 2.0 + k * SWATH
+
+for n, k in enumerate(order):
+    x = lane_x(k)
+    going_up = (n % 2 == 0)
+
+    # (1) Straight lane - implement DOWN
+    y0, y1 = (Y_LO, Y_HI) if going_up else (Y_HI, Y_LO)
     n_steps = max(2, int(abs(y1 - y0) / STEP) + 1)
     for i in range(n_steps):
         t = i / (n_steps - 1)
         waypoints.append((x, y0 + (y1 - y0) * t, V_LANE, 1))
 
-    # (2) Semicircular U-turn to next lane — implement OFF
-    if k == n_lanes - 1:
+    # (2) Semicircular U-turn into the next lane - implement UP
+    if n == len(order) - 1:
         break
-    cx, cy = x + r, y1
-    th0 = math.pi
-    th1 = 0.0 if going_up else 2.0 * math.pi   # upper ↗ / lower ↘ semicircle
-    for j in range(1, N_ARC + 1):
+    x_next = lane_x(order[n + 1])
+    r = abs(x_next - x) / 2.0
+    assert r >= MIN_TURN_R, f"turn radius {r:.2f} m < {MIN_TURN_R} m"
+    cx, cy = (x + x_next) / 2.0, y1
+    th0 = math.pi if x_next > x else 0.0
+    th1 = 0.0 if x_next > x else math.pi
+    sign = 1.0 if going_up else -1.0            # bulge up at the top end, down at the bottom end
+    # The last point (j = N_ARC) coincides with the next lane's first point.
+    # Emitting the same coordinate twice gives spacing 0 and is rejected.
+    for j in range(1, N_ARC):
         theta = th0 + (th1 - th0) * j / N_ARC
         waypoints.append((cx + r * math.cos(theta),
-                          cy + r * math.sin(theta),
+                          cy + sign * r * math.sin(theta),
                           V_TURN, 0))
 
-# --- Write RDDF file (tab-delimited, 9 columns) ---
+# --- Write the RDDF file (tab-delimited, 9 columns) ---
 with open("alpha.rddf", "w") as f:
     for idx, (x, y, v, flag) in enumerate(waypoints, 1):
         lat, lon = to_latlon(x, y)
         f.write(f"{idx}\t{idx}\t{lat:.7f}\t{lon:.7f}\t0.0\t0.0\t0.0\t{v:.2f}\t{flag}\n")
 
-print(f"{len(waypoints)} waypoints → alpha.rddf")
+print(f"{len(waypoints)} waypoints, {n_lanes} lanes, "
+      f"min turn R {MIN_R_USED:.1f} m, headland {HEADLAND:.1f} m")
 ```
 
 #### Areas to evolve with your own algorithm
 
-The script above handles only a **rectangular field with uniform lanes**. To compete on score you will need to replace the following with your own algorithm:
+The script above handles only a **rectangular field with uniform lanes**, and it leaves
+the headland strips (`HEADLAND` deep at each end) completely unplowed. To compete on
+score you will need to replace the following with your own algorithm:
 
 - **Non-rectangular field boundary handling** — clip lane lengths to fit non-rectangular field shapes
-- **Separate headland processing** — if the U-turn semicircle exits the field boundary, the **10× timer acceleration** penalty applies
-- **Lane spacing / turn radius optimization** — the tractor's minimum turning radius is approximately 3.28 m; SWATH must be at least that large for smooth U-turns
-- **Start/end point** — design the approach path from point A to the first lane
+- **Filling the headland** — cover the strips the example leaves behind with a final separate pass. Left alone they come straight off your Coverage score
+- **Finishing turns inside the field** — a semicircle that crosses the boundary costs you **Outside** for the area and **Outside Time** for the time (§7.2)
+- **Minimizing duplication** — passing over an already-completed cell counts as **Duplicate**, and wheels sitting on worked ground count as **Retread** (§7.2)
+- **Lane spacing / turn radius optimization** — shrinking the lane gap shortens the transitions, as long as every turn stays at or above the **4.35 m** minimum radius
+- **Start/end point** — design the approach path from the map spawn point to the first lane
 - **Minimizing unplowed areas** — separately handle small unplowed regions near corners and edges
 
 ### 5.4 Validation Checklist
@@ -369,11 +427,13 @@ Before uploading an RDDF, verify the following.
 - [ ] `lineNo` starts at 1 and increments without gaps
 - [ ] Map/session start pose is aligned with waypoint 0 before motion authority (§4.4)
 - [ ] Every `speed` has absolute value **at most 7.0 km/h** (below `2.05 km/h` warns)
-- [ ] Waypoint spacing is appropriate — **two points (start + end) are sufficient for straight segments**; **curve segments should be densely spaced**
-- [ ] No segments with `speed < 0` over plowed area (avoid reverse penalty)
+- [ ] Spacing between consecutive waypoints is within **0.05 m ~ 5.0 m** — anything outside that range is rejected (§4.4 rule 3)
+- [ ] Straight segments also carry points at **5 m or closer** — a long straight described by only its start and end point is rejected
+- [ ] Curve segments are dense enough — the higher the curvature, the finer the subdivision
 - [ ] When transitioning from reverse to forward, **heading reverses** (in-place rotation is not possible)
 - [ ] All reverse segments have `implementFlag` = `0`
-- [ ] U-turn path does not stray significantly outside the field boundary (10× acceleration penalty)
+- [ ] Every turn radius is at least **4.35 m** — anything tighter the tractor physically cannot drive (§4.4)
+- [ ] The U-turn path does not stray outside the field boundary (Outside · Outside Time deductions, §7.2)
 
 ---
 
@@ -381,7 +441,11 @@ Before uploading an RDDF, verify the following.
 
 ### 6.1 Cloud Upload
 
-Competition evaluation is based on the **RDDF uploaded to the cloud**. Use the `FEU_ID` and `FEATURE_ID` issued by the organizers to upload.
+Competition evaluation is based on the **RDDF uploaded to the cloud**. Upload using the environment file (Postman environment JSON) plus the `FEU_ID` and `FEATURE_ID` issued by the organizers.
+
+> `--env` is required. The environment file holds the keys `tokenUrl`, `baseUrl`, `cp_client_id`,
+> `cp_client_secret`, `feature_id` and `feu_id`; `--feature-id` and `--feu-id` are optional overrides
+> for the values in that file. `jq` and `curl` must be installed.
 
 ```bash
 cd master_of_plow/rddf
@@ -391,6 +455,7 @@ chmod +x ./upload_rddf.sh
 
 # Upload
 ./upload_rddf.sh \
+  --env ./participant-env.json \
   -f ./1.rddf \
   --feu-id <YOUR_FEU_ID> \
   --feature-id <YOUR_FEATURE_ID>
@@ -399,12 +464,7 @@ chmod +x ./upload_rddf.sh
 Example of successful output:
 
 ```
-[1/2] Requesting CP token from https://... ...
-  provider_id (sub) = ...
-[2/2] Uploading './1.rddf'
-       -> .../api/v1/features/<FEATURE_ID>/feu/<FEU_ID>/files
-  Status: 200
-Done.
+Uploaded ./1.rddf (HTTP 200).
 ```
 
 #### Parameter format
@@ -435,70 +495,121 @@ After uploading, the app receives the RDDF via `CloudDownloadListener` and parse
 
 | Item | Value |
 |------|-------|
-| Start point | **First waypoint location in the RDDF** (tractor aligns to that location on map switch) |
-| Target fields | **M1 · Open Fields**, **M2 · Sloped Acres**, **M3 · Patchwork Plots** — 3 public maps (see §4.5) |
-| Target achievement | **No hard cutoff** — coverage rate is reflected proportionally in the score |
+| Start position | The **map's spawn point**. Motion authority is granted only once waypoint 0 of your RDDF matches it (§4.4) |
+| Target fields | **M1 · M2 · M3** (§4.5) |
+| Target threshold | **No hard cutoff** — a score is produced even at low coverage |
 | Maximum speed | **7 km/h** |
-| Overlap | Allowed (no deduction) |
+| Implement | **Exactly one** per run — swapping it mid-recording invalidates the run |
 
-### 7.2 Penalties
+### 7.2 Scoring (out of 100)
 
-There are three penalties that affect competition scoring.
+A **single CSV**, recorded with REC, produces the score. Areas differ from field to field,
+so everything is normalised into **ratios (0–1)** before scoring.
 
-#### (1) Reverse in plowed area — unplowed reset
-
-Plowing at the reversed location is invalidated and reset to unplowed.
-→ Design efficient forward-only turn patterns (e.g., U-turn, Omega-turn).
-
-#### (2) Leaving the field — timer 10× acceleration
-
-While the tractor is **outside the field (Alpha boundary)**, the simulation timer runs **10× faster**.
-From the participant's perspective, every second spent outside the field adds 10 seconds to the recorded time.
-
-→ When designing headland turns that cross the field boundary, there is a large time penalty. Turn patterns that complete within the field boundary are advantageous.
-
-#### (3) Cumulative path error at finish — final time penalty
-
-A penalty in seconds proportional to the **Cross-Track Error (CTE) RMS** accumulated during the run is added to the final time.
-
-Code reference (`MainControllerImpl.cpp`, `track_complete` handler):
-
-```cpp
-RunSummary& rs = getRunSummaryMut();
-rs.elapsedS   = elapsedSAtComplete_;
-rs.penaltyS   = rs.deviationM * 1000.0;   // RMS CTE(m) × 1000
-rs.finalTimeS = rs.elapsedS + rs.penaltyS;
+```
+cov  = min(1, total_worked_m2 / work_area_m2)   what % of the field you actually worked
+dup  = duplicate_m2 / work_area_m2              what % of the field you wastefully worked twice
+out  = outside_m2   / work_area_m2              what % worth of area you spilled outside
+ret  = retread_m2   / total_worked_m2           what % of YOUR OWN worked ground is left tread on
+outt = time outside the boundary / elapsed_s    what % of the run you spent outside the field
 ```
 
-- `deviationM` — Root-mean-square (RMS) of CTE accumulated each tick, in meters
-- `penaltyS` — `deviationM × 1000` seconds
-- `finalTimeS` — `elapsedS + penaltyS`, **the final leaderboard time**
+Each metric becomes an **achievement (0–1)**, which is then **cubed** and multiplied by
+the item's points.
 
-→ An average CTE of **0.1 m** adds **100 seconds**; **0.5 m** adds **500 seconds**.
-→ Sparse curve waypoints or abrupt heading changes cause Pure Pursuit tracking error to spike, dramatically inflating the penalty.
+```
+item score = points × achievement³
 
-##### Tips for reducing average error
+SCORE = 45·cov³ + 17·dup_a³ + 16·time_a³ + 7·out_a³ + 6·outt_a³ + 9·ret_a³
+```
 
-- **Straight segments** only need **2 points** (start and end) — the tracker follows between those two points, so intermediate points are unnecessary.
-- **Curve segments** should be densely spaced — the higher the curvature, the finer the subdivision.
-- Keep heading changes between adjacent waypoints small (avoid large single-step angle changes, e.g., keep below 15°)
-- It is recommended to add a heading-jump validation step in your own generator
+| Item | Metric | Full marks | Zero | Points |
+|------|--------|-----------|------|--------|
+| Coverage | `cov` | 100% | 0% | **45** |
+| Duplicate | `dup` | ≤ 5% | ≥ 25% | **17** |
+| Time | `v_eff` | ≥ 3.5 km/h | ≤ 0.5 km/h | **16** |
+| Retread | `ret` | ≤ 5% | ≥ 20% | **9** |
+| Outside | `out` | 0% | ≥ 10% | **7** |
+| Outside Time | `outt` | 0% | ≥ 10% | **6** |
 
-### 7.3 Winning Criteria
+**The cube is decisive.** Points accrue quickly only when the achievement is near full marks.
 
-- Both **final time (`finalTimeS = elapsedS + penaltyS`)** and **coverage rate** contribute to the score.
-- There is **no minimum coverage rate threshold** (e.g., 95%) that must be met.
-- However, a lower coverage rate is disadvantageous in scoring, so you must **jointly optimize** time reduction, coverage rate, and average error minimization.
-- `finalTimeS` includes both the 10× acceleration due to leaving the field and the cumulative error addition.
+| Achievement | 0.5 | 0.7 | 0.8 | 0.9 | 0.95 | 1.0 |
+|-------------|-----|-----|-----|-----|------|-----|
+| Share of points earned | 13% | 34% | 51% | 73% | 86% | 100% |
 
-### 7.4 Evaluation Method
+At 62% coverage, near-perfect scores on everything else still leave you under 60 points.
+**Filling the field to the end matters more than anything else.**
 
-- All evaluation is based on **data recorded in the server leaderboard**.
-- When a simulation is run with a participant's uploaded RDDF, the results (`finalTimeS`, coverage rate, etc.) are automatically aggregated onto the leaderboard.
-- Locally measured time/coverage rate is for reference only; **the official record is the leaderboard value**.
-- There is no separate result submission process — your team's best score recorded on the leaderboard at the deadline is automatically evaluated.
+#### Time is not seconds — it is effective working speed
 
-### 7.5 Run / Connection / Team Name Rules (strictly enforced)
+Absolute seconds vary with field size and implement width, so they cannot be compared.
+Instead we compute **the minimum distance needed to cover this field (`D_ideal`) and
+divide it by the time actually taken**, giving a speed.
+
+```
+R       = tractor minimum turning radius (compact 3.2 / medium 4.0 / large 4.9 m)
+W       = implement working width (m) — from the CSV's `# implement` line
+S       = short side of the map polygon's minimum bounding rectangle (m)
+N       = ceil(S / W)                              number of passes
+
+D_ideal = work_area_m2 / W + (N − 1) × π × R       (m)
+v_eff   = D_ideal / elapsed_s × 3.6                (km/h)
+```
+
+`elapsed_s` is `duration_ms / 1000` and is **sim time**, so running at an accelerated
+rate does not shorten your record.
+
+Full-marks times per map for a large tractor (`R = 4.9`) with a large plow (`W = 3.6`):
+
+| Map | Scored area (m²) | `D_ideal` (m) | Full-marks time |
+|-----|------------------|---------------|-----------------|
+| M1 Open Fields | 1,499 | 570.5 | **587 s** (9m47s) |
+| M2 Sloped Acres | 1,947 | 756.5 | **778 s** (12m58s) |
+| M3 Patchwork Plots | 1,356 | 576.6 | **593 s** (9m53s) |
+
+Changing tractor or implement changes `R` and `W`, and every one of these is recomputed.
+
+### 7.3 INVALID Runs
+
+If **any** of the following holds, no score is produced and the run is excluded from the ranking.
+
+| Condition | How it is detected |
+|-----------|--------------------|
+| **Manual driving** | **One or more** telemetry rows with `manual == 1` |
+| **Manual key input** | An `event_t_ms,edge,key` block **exists** |
+| **Implement changed** | **Two or more** `# implement` lines |
+| **Unscorable** | No `# work_area_m2` or no `# map` line |
+
+Do not touch the keyboard while REC is running. Grabbing the steering or nudging the
+throttle or brake even once invalidates the entire run. Finish any tractor or implement
+change **before** you start recording.
+
+### 7.4 Rules That Have Been Retired
+
+These differ from earlier guidance. **The following three no longer apply.**
+
+| Retired rule | Current state |
+|--------------|---------------|
+| **Reverse in the plowed area resets it to unplowed** | **Retired.** Measured reverse residue is near zero, and the cost of reversing already shows up in Time and Duplicate |
+| **Timer runs 10× faster outside the field** | **Gone.** It was removed from the app too. Area outside the boundary now scores as **Outside**, and time outside as **Outside Time** |
+| **Average path error added at the finish** | **Not a scoring item.** No formula such as `finalTimeS = elapsedS + penaltyS` exists |
+
+Path tracking error is not scored directly, but a large error drifts you off the lane, which
+lowers `cov` and raises `dup` and `ret` — so it hurts a great deal **indirectly**.
+
+### 7.5 Evaluation Method
+
+- Drive with **REC recording enabled** in the emulator and submit the saved run record to the leaderboard.
+- The submission file is the **sealed `.csv.enc`**, openable only with the organizers' key. The plain CSV you also receive is for your own analysis.
+- Locally measured time and area are for reference only; **the official record is the leaderboard value**.
+- Per-map scores are summed using the **team name** as the key.
+
+> The official announcement is the final authority on points, tolerances and the exact
+> submission mechanism. The figures here are copied from the leaderboard scoring rules; if
+> they change, the announcement wins.
+
+### 7.6 Run / Connection / Team Name Rules (strictly enforced)
 
 > Violating the rules below may result in that run being invalidated, and repeated violations may constitute grounds for disqualification.
 
@@ -534,15 +645,16 @@ rs.finalTimeS = rs.elapsedS + rs.penaltyS;
         ↓
    ┌─→ [6] Upload to cloud via upload_rddf.sh
    │        ↓
-   │   [7] Run driving session in simulator → measure finalTime / coverage rate
+   │   [7] Turn on REC in the emulator and drive → check elapsed time / plowed area
+   │        (no keyboard input while recording — one touch invalidates the run)
    │        ↓
-   │   [8] Confirm leaderboard update — your team's best record updates automatically
+   │   [8] Submit the saved run record to the leaderboard → confirm the record updated
    │        ↓
    └── [9] Tune algorithm / parameters → return to 4 or 6
 
    * Repeat the [6]–[9] loop until the deadline, updating the leaderboard each attempt.
-   * There is no separate "final submission" step — your team's best record
-     (summed across maps) on the leaderboard at the deadline is automatically evaluated.
+   * Your team's best record (summed across maps) left on the leaderboard at the
+     deadline is what gets evaluated.
    * If you get stuck between [2] and [3], read §10. Knowing how the tractor
      reacts to a path makes the algorithm design in [3] much easier.
 ```
@@ -565,19 +677,32 @@ Questions are grouped by topic. `(§N)` at the end of each answer refers to the 
 
 > **Q1.** Do you submit a single RDDF file, or one per map?
 
-**Upload one per map.** The competition uses three public maps M1, M2, and M3; upload an RDDF for each map using the corresponding mapId. Per-map scores are summed using the **team name** as the key. (§4.5, §7.5)
+**Upload one per map.** The competition uses three maps, M1, M2 and M3; upload the RDDF file for each map separately (specified per file, e.g. `upload_rddf.sh -f ./1.rddf` — there is no mapId parameter). Per-map scores are summed using the **team name** as the key. (§4.5, §7.5)
 
 ---
 
 > **Q2.** Do you need 100% coverage to win?
 
-**No — there is no minimum coverage rate threshold.** However, coverage rate is reflected proportionally in the score, so at equal time a team with higher coverage has an advantage. The strategic core is deciding how to **balance time vs. coverage rate**.
+**There is no threshold you must clear.** But Coverage carries the largest allocation at
+45 points and its achievement is **cubed**, so a low coverage collapses your score.
+
+| Coverage | Points earned (of 45) |
+|---------:|----------------------:|
+| 50% | 5.6 |
+| 70% | 15.4 |
+| 90% | 32.8 |
+| 100% | 45.0 |
+
+Spending a little extra time to fill the field to the end almost always pays. (§7.2)
 
 ---
 
 > **Q3.** Is there a separate "final submission" step?
 
-**No.** Your team's **best record** on the leaderboard at the deadline is automatically evaluated. Keep uploading and running until the deadline to keep improving your record. (§7.4)
+You must **submit the REC record (the sealed `.csv.enc`) to the leaderboard** for each run
+before it counts. Submitting is the record update. Whatever your team has on the
+leaderboard at the deadline is what gets evaluated, so keep the upload → drive → submit
+loop going until then. (§7.5)
 
 ---
 
@@ -614,37 +739,61 @@ machine may apply its runtime creep floor. (§4.2, §4.4)
 
 > **Q7.** Does a route with lots of overlap help?
 
-**It hurts.** Overlap itself is not penalized, but it increases total time, which puts you at a disadvantage in time competition. Design as efficient a coverage pattern as possible.
+**It hurts, and it is directly deducted.** Passing over ground that has already reached the
+completion threshold counts as **Duplicate**, worth 17 points.
+
+- Up to **5% of the field earns full marks** — some implement overlap is normal practice to avoid unworked stripes
+- Past **25% it scores zero**
+- In between the achievement is cubed, so even 10% costs you a lot
+
+`Time` takes a hit as well, so it is a double loss. (§7.2)
 
 ---
 
-> **Q8.** Is reverse strictly forbidden during turns?
+> **Q8.** May I use reverse during turns?
 
-**Only reverse within the plowed area (implement down) triggers the unplowed-reset penalty.**
+**Yes. The reverse-specific penalty has been retired.** (§7.4)
 
-- OK: Reverse in the headland (`implementFlag=0`) area — no unplowed penalty
-- NG: Reverse inside the plowed implement-down zone — unplowed-reset penalty applies
-- Note: Reverse in any zone still causes time loss and tricky heading-reversal handling, making it generally inefficient
+It rarely pays off, though.
+
+- Every forward↔reverse switch **stops the vehicle completely and re-accelerates**, costing time outright → worse `Time`
+- The segment you back over is ground you already covered, raising `Duplicate` and `Retread`
+- `implementFlag` must be `0` on every reverse segment (§4.3)
+
+Consider it only as an alternative to a three-point turn on a field too narrow for a
+semicircular U-turn.
 
 ---
 
 > **Q9.** It is convenient to swing the U-turn far outside the field — how bad is the penalty?
 
-**The timer runs 10× faster while outside the field boundary.** For example, turning outside the headland for 3 seconds adds 30 seconds. Complete U-turns inside the field as much as possible. (§7.2)
+**There is no 10× timer.** Instead it is deducted through two separate items.
+
+| Item | Metric | Zero at | Points |
+|------|--------|---------|--------|
+| Outside | area worked outside the boundary ÷ field area | 10% | 7 |
+| Outside Time | time spent outside ÷ total time | 10% | 6 |
+
+Both take **full marks only at 0%** — they are treated as pure defects that nothing forces
+on you. The 13 combined points are modest, but turning outside also burns time, so `Time`
+suffers too. Finishing the turn inside the boundary is the better play. (§7.2)
 
 ---
 
-> **Q10.** How significant is the average error penalty?
+> **Q10.** How much does path tracking error affect the score?
 
-The formula is `penaltyS = deviationM × 1000` seconds. Concrete examples:
+**It is not a scored item.** No penalty seconds attach to the error itself. (§7.4)
 
-| Average CTE | Penalty |
-|------------:|--------:|
-| 0.1 m | 100 s |
-| 0.5 m | 500 s |
-| 1.0 m | 1000 s |
+The indirect effect is large, though. When the tractor drifts off the lane, cells that
+should have been worked are missed (`cov` down), it strays into the neighbouring lane and
+reworks covered ground (`dup` up), and its wheels sit on worked ground (`ret` up). Those
+items carry 45 + 17 + 9 = 71 points between them.
 
-→ Reduce it by increasing **waypoint density on curves** and **minimizing heading jumps**. (§7.2)
+The values visible from the app are the **LTD (lateral deviation)** on the dashboard and
+the `cte` column in `/tmp/pp_trace.csv`. If that value keeps accumulating to one side on a
+curve, that section exceeded the vehicle's tracking limit.
+
+→ Reduce it by increasing **waypoint density on curves** and **minimizing heading jumps**. (§10.6)
 
 ---
 
@@ -658,13 +807,13 @@ The formula is `penaltyS = deviationM × 1000` seconds. Concrete examples:
 - NG: Two instances both run M1 under the same team name simultaneously
 - NG: Multiple browser tabs connected to the same app instance
 
-(§7.5)
+(§7.6)
 
 ---
 
 > **Q12.** Can I change the team name mid-competition?
 
-**It is strongly discouraged.** The team name is the key for summing per-map scores, so **even a single character difference** is treated as a separate team with separate scores. Finalize your team name before the first run and use exactly the same string across all maps and all runs. (§7.5)
+**It is strongly discouraged.** The team name is the key for summing per-map scores, so **even a single character difference** is treated as a separate team with separate scores. Finalize your team name before the first run and use exactly the same string across all maps and all runs. (§7.6)
 
 ---
 
@@ -703,10 +852,17 @@ Path tracking is collected in one place: `master_of_plow_app/src-gen/AppMain/tra
 AppMain/tracking/
 ├── TrackerTypes.hpp      Frame/sign conventions + the exchanged data types  ← start here
 ├── IPathTracker.hpp      The contract a tracking algorithm must satisfy
-├── PathTrackerBase.hpp    Base class that pre-implements the boilerplate
-├── SpeedController.hpp    Gear/throttle/brake (shared by all algorithms)
-├── TrackerFactory.*       Name → implementation
-├── TrackingLoop.*         Control loop (GPS conversion, command publishing, telemetry)
+├── PathTrackerBase.hpp   Base class that pre-implements the boilerplate
+├── SpeedController.hpp   Gear/throttle/brake (shared by all algorithms)
+├── SteeringController.hpp Publishes the steering command
+├── TrackerFactory.*      Name → implementation
+├── TrackerSwitch.*       Handles tracker switching at runtime
+├── TrackingLoop.*        Control loop (GPS conversion, command publishing, telemetry)
+├── SampleClock.hpp       Time base for the control cycle
+├── ControlTimeGate.hpp   Control-cycle gate
+├── GpsSampleStore.hpp    GPS sample storage
+├── SignalFreshness.hpp   Signal freshness decision
+├── ClockLog.hpp / ClockTelemetry.hpp  Timing diagnostics
 └── impl/
     ├── PurePursuitTracker.*  Default tracker (the one that actually drives in the contest)
     └── StanleyTracker.*      A second worked example
@@ -742,15 +898,18 @@ every algorithm. The only part that changes is `update()`.
 
 ### 10.4 How the Default Tracker Chooses a Steering Angle
 
-Despite the name, it is a **weighted sum of five terms**, and the pure Pure
-Pursuit geometry contributes only 45%.
+Despite the name, it is a **weighted sum of five terms**. The defaults are set so the
+**pure-pursuit term leads (weight 0.7) and the rest only trim**. Pure pursuit already
+corrects cross-track and heading error at once, so raising the auxiliary gains to match
+corrects the same error three times over, pins the steering at its limit and produces the
+S-weave.
 
 | Term | Role |
 |------|------|
 | Curvature feedforward | Steering the path's own curvature demands (independent of error) |
 | Heading error (HDE) | Aligns the vehicle with the path tangent |
 | Lateral deviation (LTD) | Pulls the vehicle back onto the path. On lanes it is measured at the **predicted position 1.5 s ahead**; in turns, at the current position |
-| Pure Pursuit | Arc toward the lookahead target — responsible for smoothness (weight 0.45) |
+| Pure Pursuit | Arc toward the lookahead target — **the primary steer** (`ppWeightPp` default **0.7**) |
 | Yaw-rate damping | Suppresses oscillation when the terms above overreact |
 
 ### 10.5 ★ Properties That Directly Affect RDDF Design
@@ -759,12 +918,12 @@ This is the most practical part of this section.
 
 | Tracker property | Write your RDDF like this |
 |------------------|---------------------------|
-| Lookahead distance is **5.5–8 m** (scales with speed) | Curves with a tighter radius get cut on the inside. Ease sharp turns out, or space waypoints more densely |
+| Lookahead distance = **speed × 9 s**, clamped to `5 m ~ 20 m` (shorter on curves) | Curves with a radius tighter than this get cut on the inside. Ease sharp turns out, or space waypoints more densely |
 | Curvature estimated as a weighted average over **5 consecutive points** around the closest one | Sparse waypoints degrade the curvature estimate, leaving arcs under-steered (§4.4 rule 4) |
 | The implement is **3 m behind** the vehicle | `implementFlag` transitions fire when the implement passes, so allow ~3 m of margin at lane starts and ends |
 | Tracking does not start until the vehicle is **within 3 m of waypoint 0** | Match your first waypoint to the map's point A (§4.4) |
-| A forward↔reverse change **brakes to a full stop** | Every direction change costs a full stop plus re-acceleration. Reversing also voids plowed ground (§7.2), so forward-based turns win |
-| Completion = **within 1 m** of the last waypoint + a progress gate | Make the last waypoint an unambiguous end point |
+| A forward↔reverse change **brakes to a full stop** | Every direction change costs a full stop plus re-acceleration, straight off `Time`, so forward-based turns win (§7.2) |
+| Completion = **within 1 m** of the last waypoint **and** inside the last 10 waypoints | Make the last waypoint an unambiguous end point |
 | Progress never regresses even if the path crosses itself | Skip-lane patterns are safe |
 
 ### 10.6 Observing Behaviour Locally

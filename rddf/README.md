@@ -8,10 +8,14 @@ smooth geometry, relabel `implementFlag`, or change a submitted speed.
 `implementFlag` controls only implement up/down and has no effect on lateral
 steering.
 
-Validation accepts zero as an explicit stop waypoint. Every nonzero speed must
-have magnitude 2.05..7.0 km/h; unsupported values are rejected with a clear
-error rather than clamped. Invalid indices, fields, spacing, flags, non-finite
-data, and geometry tighter than the vehicle's physical limit are also rejected.
+Validation accepts zero as an explicit stop waypoint. A magnitude above
+7.0 km/h is rejected with a clear error rather than clamped. A nonzero
+magnitude below the machine's continuous floor of 2.05 km/h is loaded
+unchanged and reported as a warning, because the speed controller may apply
+its creep floor at runtime. Invalid indices, fields, flags, non-finite data,
+and spacing outside 0.05..5.0 m are rejected. Geometry tighter than the
+vehicle's minimum turn radius (about 4.35 m) is loaded unchanged and reported
+as a tracking-limit warning.
 
 Start-position proximity is not intrinsic to the file and is not checked
 against a fabricated position. Before granting motion authority, the official
