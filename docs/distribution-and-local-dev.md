@@ -20,10 +20,15 @@ The dashboard unit tests under `customui-src/src/dashboard/` are part of the
 deliverable — participants run them with `npm run test` — but they are excluded
 from the UI runtime hash because they are not FIF runtime content.
 
-Run `python3 tools/check_distribution.py` from the repository root. It prints
-the exact sorted file list, a content hash for that list, and the canonical UI
-runtime hash. The checker fails if a required-absent validation artifact returns
-or if runtime UI bytes differ from the recorded canonical baseline.
+The manifest is a record of that boundary, not something you need to run. The
+organizers verify it with an internal checker that lives in `tools/`, which is
+itself excluded from this repository — it prints the exact sorted file list, a
+content hash for that list, and the canonical UI runtime hash, and fails if a
+required file is missing, if a required-absent validation artifact returns, or
+if the deploy output no longer resolves the assets its `index.html` names.
+
+Nothing here asks you to run it. Build the app and the dashboard from the IDE,
+and use `npm run test` in `customui-src/` for the dashboard unit tests.
 
 ## `SEAMOS_DEV_LOCAL_SIM`
 
