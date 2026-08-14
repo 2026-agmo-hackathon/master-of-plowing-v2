@@ -12,7 +12,7 @@
 - **Strafen (insgesamt 3 Arten)**
   - **Rückwärtsfahrt (Reverse)** auf dem Feld — der betroffene Bereich wird als ungepflügter Bereich zurückgesetzt
   - **Verlassen des Felds** — der Timer läuft **10-fach schneller** (solange der Traktor außerhalb der Grenze ist)
-  - **Mittlerer Fehler bei Abschluss** — der kumulative Pfadfehler (RMS) wird zur Endzeit addiert
+  - **Pfadfolgefehler** — der kumulative Pfadfehler (RMS) wirkt sich nachteilig auf das Ergebnis aus
 - **Bewertung**: **Gesamtzeit** und **Flächenanteil (ungepflügte Bereiche minimieren)** fließen beide in die Punktzahl ein.
   - Es gibt **keinen harten Cutoff** (z. B. 95%) — auch bei niedrigem Flächenanteil ist eine Ergebnisabgabe möglich
   - Ein niedrigerer Flächenanteil wirkt sich jedoch nachteilig auf die Punktzahl aus
@@ -29,6 +29,7 @@
 | **SeamOS IDE (FeatureDesigner)** | Distributionsversion der Organisatoren verwenden |
 | **Claude Code** | Aktuelle Version von der offiziellen Website installieren |
 | **SeamOS Everywhere** | Distributionsversion der Organisatoren verwenden |
+| **SeamOS World (Emulator)** | Umgebung, in der das RDDF tatsächlich gefahren und geprüft wird. Lokale Installation oder `seamosworld.seamos.io` |
 
 
 ---
@@ -37,14 +38,19 @@
 
 ```
 master_of_plow/
-├── com.bosch.fsp.master_of_plow/   # FSP (Feature Spec Project)
-├── master_of_plow_app/             # App-Hauptteil (C++-Code, Konfiguration)
-│   └── src-gen/AppMain/tracking/   # Pfadverfolgungs-Skelett — Referenz zum Lesen (§10)
-├── master_of_plow_CPP_SDK/         # SeamOS C++ SDK (bereitgestellt)
-├── customui-src/                   # Dashboard-Quellcode (React + Vite)
-├── rddf/                           # RDDF-Bereich (Erstellen & Validieren durch Teilnehmer)
-├── docs/                           # Ablaufsteuerung und FIF-Validierung
-└── HACKATHON_GUIDE.md              # Dieses Dokument
+├── com.bosch.fsp.master_of_plow/            # FSP (Feature Spec Project)
+├── com.bosch.fsp.master_of_plow.gen/        # Aus dem FSP erzeugte Artefakte
+├── com.bosch.fsp.master_of_plow.gen.tests/  # Erzeugte Test-Artefakte
+├── master_of_plow_app/                      # App-Hauptteil (C++-Code, Konfiguration)
+│   ├── src-gen/AppMain/tracking/            # Pfadverfolgungs-Skelett (§10)
+│   └── tests/                               # Lokale Testmodule
+├── master_of_plow_CPP_SDK/                  # SeamOS C++ SDK (bereitgestellt)
+├── customui-src/                            # Dashboard-Quellcode (React + Vite)
+├── rddf/                                    # RDDF-Bereich (Erstellen & Validieren durch Teilnehmer)
+├── docs/                                    # Ablaufsteuerung und FIF-Validierung
+├── distribution/                            # Distributionsartefakte
+├── seamos-assets/                           # Marketplace-Bilder und weitere Assets
+└── HACKATHON_GUIDE.md                       # Dieses Dokument (mit en · de · th Übersetzungen)
 ```
 
 ### 3.1 Öffnen in der SeamOS IDE
@@ -131,8 +137,13 @@ RDDF-Dateien werden sofort nach Empfang aus der Cloud automatisch validiert. For
 |------|------|---------|
 | **(1) Leere Datei** | 0 Waypoints | abgelehnt |
 | **(2) Geschwindigkeitsbereich** | `\|speed\| ≤ 7,0 km/h`; ein Nicht-null-Betrag unter `2,05 km/h` kann nicht dauerhaft gehalten werden | Oberhalb der Grenze ablehnen; niedrige Geschwindigkeit unverändert laden und warnen |
-| **(3) Waypoint-Abstand** | Benachbarte Punkte erfüllen den dokumentierten Mindest-/Höchstabstand | Ablehnung mit dem betroffenen Paar |
-| **(4) Physikalische Krümmung** | Lokale Geometrie mit der gemessenen Lenkgrenze vergleichen | Unverändert laden und vor der Nachführgrenze warnen |
+| **(3) Waypoint-Abstand** | Abstand benachbarter Punkte **mindestens 0,05 m und höchstens 5,0 m** | Ablehnung mit dem betroffenen Paar und dem tatsächlichen Abstand |
+| **(4) Physikalische Krümmung** | Krümmung aus der Headingänderung über drei aufeinanderfolgende Punkte, verglichen mit dem Mindestwendekreis des Fahrzeugs (ca. **4,35 m**) | Unverändert laden und vor der Nachführgrenze warnen |
+
+> Im Code entsprechen diese Punkte Rule 1 · Rule 2 · Rule 3 · Rule 6
+> (`RddfValidator.cpp`). Die Konstanten stehen in `RddfValidator.hpp`:
+> `MIN_WAYPOINT_SPACING_M = 0.05`, `MAX_WAYPOINT_SPACING_M = 5.0`,
+> `MAX_MACHINE_SPEED_KMH = 7.0`, `MIN_MACHINE_SPEED_KMH = 2.05`.
 
 #### Verhalten bei Ablehnung
 
@@ -257,7 +268,8 @@ master_of_plow/rddf/
 ├── 2.rddf                  # Route für Feld 2
 ├── 3.rddf                  # Route für Feld 3
 ├── upload_rddf.sh          # Cloud-Upload-Skript
-└── how-to-upload-rddf.md   # Hinweise zu Upload-Befehlen
+├── how-to-upload-rddf.md   # Hinweise zu Upload-Befehlen
+└── README.md               # Dateikonventionen und Validierungsverhalten
 ```
 
 ### 5.2 RDDF manuell erstellen
@@ -358,7 +370,7 @@ Das obige Skript behandelt nur **rechteckige Felder mit gleichmäßigen Spuren**
 
 - **Polygon-Verarbeitung der Feldgrenze** — Spurlängen an die tatsächliche Feldform (kein Rechteck) anpassen
 - **Separater Umgang mit dem Vorgewende (headland)** — wenn der Halbkreis-U-turn über den Feldrand hinausgeht, greift die **Timer-10-fach-Beschleunigung** als Penalty
-- **Optimierung von Spurabstand / Wendekreisradius** — Mindestwendekreis des Traktors ≈ 3,28 m; SWATH sollte größer sein, um einen gleichmäßigen U-turn zu ermöglichen
+- **Optimierung von Spurabstand / Wendekreisradius** — Mindestwendekreis des Traktors ≈ **4,35 m** (`WHEELBASE_M 2.05 / tan(WHEEL_MAX_RAD 0.44)`); SWATH sollte größer sein, um einen gleichmäßigen U-turn zu ermöglichen
 - **Start- und Endpunkt** — Entwurf der Einfahrtroute vom Punkt A zur ersten Spur
 - **Minimierung ungepflügter Bereiche** — kleine ungepflügte Bereiche an Ecken und Rändern separat behandeln
 
@@ -370,7 +382,9 @@ Prüfe folgende Punkte, bevor du das RDDF hochlädst.
 - [ ] `lineNo` beginnt bei 1 und steigt lückenlos an?
 - [ ] Startpose von Karte/Sitzung vor der Bewegungsfreigabe an Waypoint 0 ausgerichtet? (§4.4)
 - [ ] Hat jeder `speed`-Wert einen Absolutwert von **höchstens 7,0 km/h** (unter `2,05 km/h` erfolgt eine Warnung)?
-- [ ] Waypoint-Abstände angemessen? — **Bei geraden Abschnitten genügen 2 Punkte (Start + Ende)**, **bei Kurvenabschnitten ausreichend dicht**
+- [ ] Liegt der Abstand benachbarter Waypoints im Bereich **0,05 m ~ 5,0 m**? — außerhalb dieses Bereichs wird die Datei abgelehnt (§4.4 Regel 3)
+- [ ] Sind auch gerade Abschnitte mit **höchstens 5 m** Abstand besetzt? — eine lange Gerade mit nur Start- und Endpunkt wird abgelehnt
+- [ ] Sind Kurvenabschnitte dicht genug besetzt? — je größer die Krümmung, desto feiner die Unterteilung
 - [ ] Keine Abschnitte mit `speed < 0` auf dem gepflügten Feld? (Rückwärtsfahrt-Penalty vermeiden)
 - [ ] Bei Rückwärts → Vorwärts-Wechsel: **Heading umgekehrt**? (Drehung auf der Stelle nicht möglich)
 - [ ] `implementFlag` aller Rückwärtsabschnitte ist `0`?
@@ -382,7 +396,11 @@ Prüfe folgende Punkte, bevor du das RDDF hochlädst.
 
 ### 6.1 Cloud-Upload
 
-Die Wettbewerbsbewertung basiert auf dem **in der Cloud hochgeladenen RDDF**. Verwende die von den Organisatoren ausgestellten Werte für `FEU_ID` und `FEATURE_ID`.
+Die Wettbewerbsbewertung basiert auf dem **in der Cloud hochgeladenen RDDF**. Lade es mit der von den Organisatoren bereitgestellten Umgebungsdatei (Postman environment JSON) sowie den Werten für `FEU_ID` und `FEATURE_ID` hoch.
+
+> `--env` ist erforderlich. Die Umgebungsdatei enthält die Schlüssel `tokenUrl`, `baseUrl`,
+> `cp_client_id`, `cp_client_secret`, `feature_id` und `feu_id`; `--feature-id` und `--feu-id` sind
+> optionale Overrides für die Werte aus dieser Datei. `jq` und `curl` müssen installiert sein.
 
 ```bash
 cd master_of_plow/rddf
@@ -392,6 +410,7 @@ chmod +x ./upload_rddf.sh
 
 # Hochladen
 ./upload_rddf.sh \
+  --env ./participant-env.json \
   -f ./1.rddf \
   --feu-id <YOUR_FEU_ID> \
   --feature-id <YOUR_FEATURE_ID>
@@ -400,12 +419,7 @@ chmod +x ./upload_rddf.sh
 Beispiel einer erfolgreichen Ausgabe:
 
 ```
-[1/2] Requesting CP token from https://... ...
-  provider_id (sub) = ...
-[2/2] Uploading './1.rddf'
-       -> .../api/v1/features/<FEATURE_ID>/feu/<FEU_ID>/files
-  Status: 200
-Done.
+Uploaded ./1.rddf (HTTP 200).
 ```
 
 #### Parameterformat
@@ -458,46 +472,39 @@ Aus Sicht der Teilnehmer bedeutet das: Jede Sekunde außerhalb des Felds entspri
 
 → Beim Wenden im Vorgewende (headland), wenn die Route über die Feldgrenze hinausgeht, entsteht ein großer Zeitverlust. Wendemuster, die vollständig innerhalb der Feldgrenze abgeschlossen werden, sind vorteilhaft.
 
-#### (3) Mittlerer Fehler bei Abschluss — Penalty auf die Endzeit
+#### (3) Pfadfolgefehler — fließt in das Ergebnis ein
 
-Der während der Fahrt kumulierte **Pfadfolgefehler (Cross-Track Error, RMS)** wird proportional als Penalty-Sekunden zur Endzeit addiert.
+Der während der Fahrt kumulierte **Pfadfolgefehler (Cross-Track Error, RMS)** wirkt sich nachteilig auf das Endergebnis aus.
 
-Code-Referenz (`MainControllerImpl.cpp`, Abschnitt `track_complete`):
+Die App veröffentlicht in jedem Regelzyklus die Querabweichung (LTD) als Telemetrie und meldet
+nach Abschluss der Fahrt `track_complete` inklusive der verstrichenen Zeit. **Punktevergabe und
+Rangbildung übernimmt der Leaderboard-Server, nicht die App** — die genaue Formel inklusive
+Gewichtungsfaktor richtet sich nach der offiziellen Wettbewerbsordnung.
 
-```cpp
-RunSummary& rs = getRunSummaryMut();
-rs.elapsedS   = elapsedSAtComplete_;
-rs.penaltyS   = rs.deviationM * 1000.0;   // RMS CTE(m) × 1000
-rs.finalTimeS = rs.elapsedS + rs.penaltyS;
-```
-
-- `deviationM` — kumulierter RMS-Wert des CTE (Root Mean Square) pro Tick, Einheit Meter
-- `penaltyS` — `deviationM × 1000` Sekunden
-- `finalTimeS` — `elapsedS + penaltyS`, **Leaderboard-Endergebnis**
-
-→ Bei einem mittleren CTE von **0,1 m** kommen **100 Sekunden** Penalty hinzu, bei **0,5 m** sind es **500 Sekunden**.
-→ Wenn Kurvenabschnitte zu dünn besetzt sind oder abrupte Heading-Wechsel auftreten, steigt der Pure Pursuit-Verfolgungsfehler stark an und die Penalty explodiert.
+→ Wenn Kurvenabschnitte zu dünn besetzt sind oder abrupte Heading-Wechsel auftreten, steigt der Pure Pursuit-Verfolgungsfehler stark an und das Ergebnis verschlechtert sich.
 
 ##### Tipps zur Reduzierung des mittleren Fehlers
 
-- **Gerade Abschnitte** benötigen nur **2 Punkte** (Start + Ende) — der Tracker folgt der Linie zwischen zwei Punkten, Zwischenpunkte sind nicht nötig.
+- **Gerade Abschnitte** müssen nicht dicht besetzt sein, der Höchstabstand beträgt jedoch **5 m** — größere Abstände führen zur Ablehnung der Datei (§4.4 Regel 3).
 - **Kurvenabschnitte** sollten ausreichend dicht besetzt sein — je größer die Krümmung, desto feiner die Unterteilung.
 - Heading-Änderungen zwischen benachbarten Waypoints klein halten (kein großer Winkelsprung auf einmal, z. B. unter 15°)
 - Es wird empfohlen, im eigenen Generator eine Validierungslogik für Heading-Sprünge einzubauen
 
 ### 7.3 Siegerermittlung
 
-- **Endzeit (`finalTimeS = elapsedS + penaltyS`)** und **Flächenanteil (Abdeckungsrate)** fließen beide in die Punktzahl ein.
+- **Gesamtzeit**, **Flächenanteil (Abdeckungsrate)** und **Pfadfolgefehler** fließen gemeinsam in die Punktzahl ein.
 - Es gibt **keinen** Mindest-Flächenanteil (z. B. 95%), den du erreichen musst.
 - Ein niedrigerer Flächenanteil wirkt sich jedoch nachteilig auf die Punktzahl aus — Zeitminimierung, Flächenanteil-Maximierung und mittlere Fehlerminimierung müssen **gemeinsam optimiert** werden.
-- `finalTimeS` enthält sowohl den Zeitanteil durch 10-fache Beschleunigung bei Feldaustritt als auch den Penalty durch den mittleren Fehler.
+- Auch der Zeitanteil durch die 10-fache Beschleunigung bei Feldaustritt fließt in die Zeit ein.
+- Gewichtungen und Formeln wendet der Leaderboard-Server gemäß der offiziellen Wettbewerbsordnung an.
 
 ### 7.4 Bewertungsmethode
 
 - Alle Bewertungen basieren auf **den im Server-Leaderboard erfassten Daten**.
-- Wenn eine Simulation mit dem hochgeladenen RDDF ausgeführt wird, werden die Ergebnisse (`finalTimeS`, Flächenanteil usw.) automatisch im Leaderboard zusammengefasst.
+- Die Fahrt wird im Emulator mit **eingeschalteter REC-Aufzeichnung** gefahren; die nach Abschluss gespeicherte Fahraufzeichnung wird beim Leaderboard eingereicht.
+  Die Einreichungsdatei ist verschlüsselt und lässt sich nur mit dem Schlüssel der Organisatoren öffnen. Die zusätzlich erzeugte Klartext-CSV dient der eigenen Analyse.
 - Lokal gemessene Zeiten/Flächenanteile sind nur als Referenz zu betrachten — **offizielle Ergebnisse sind die Leaderboard-Werte**.
-- Es gibt kein separates Einreichungsverfahren — das beste Ergebnis deines Teams im Leaderboard zum Ablauf der Frist ist das endgültige Bewertungsergebnis.
+- Das beste Ergebnis deines Teams im Leaderboard zum Ablauf der Frist ist das endgültige Bewertungsergebnis.
 
 ### 7.5 Fahrt- / Verbindungs- / Teamnamen-Regeln (strikt einzuhalten)
 
@@ -535,15 +542,15 @@ rs.finalTimeS = rs.elapsedS + rs.penaltyS;
         ↓
    ┌─→ [6] Mit upload_rddf.sh in die Cloud hochladen
    │        ↓
-   │   [7] Fahrt im Simulator ausführen → finalTime / Flächenanteil messen
+   │   [7] Im Emulator REC einschalten und fahren → verstrichene Zeit / gepflügte Fläche prüfen
    │        ↓
-   │   [8] Leaderboard-Aktualisierung prüfen — bestes Ergebnis des Teams wird automatisch aktualisiert
+   │   [8] Gespeicherte Fahraufzeichnung beim Leaderboard einreichen → Aktualisierung prüfen
    │        ↓
    └── [9] Algorithmus / Parameter tunen → zurück zu 4 oder 6
 
    * Wiederhole die Schleife [6]–[9] bis zur Deadline und verbessere bei jedem Versuch das Leaderboard-Ergebnis.
-   * Es gibt kein separates "Finale einreichen" — das beste Ergebnis deines Teams
-     im Leaderboard zum Ablauf der Frist (summiert über alle Karten) wird direkt bewertet.
+   * Das beste Ergebnis deines Teams im Leaderboard zum Ablauf der Frist
+     (summiert über alle Karten) wird direkt bewertet.
    * Wenn du zwischen [2] und [3] feststeckst, lies §10. Zu wissen, wie der Traktor
      auf einen Pfad reagiert, macht den Algorithmus-Entwurf in [3] deutlich leichter.
 ```
@@ -566,7 +573,7 @@ Fragen sind nach Themen gruppiert. Das `(§N)` am Ende jeder Antwort verweist au
 
 > **F1.** Wird eine RDDF-Datei für alle Karten eingereicht oder für jede Karte separat?
 
-**Für jede Karte separat hochladen.** Der Wettbewerb verwendet drei öffentliche Karten M1, M2 und M3. Für jede Karte wird die RDDF mit der jeweiligen mapId hochgeladen. Punktzahlen pro Karte werden mit dem **Teamnamen** als Schlüssel summiert. (§4.5, §7.5)
+**Für jede Karte separat hochladen.** Der Wettbewerb verwendet drei öffentliche Karten M1, M2 und M3. Für jede Karte wird die zugehörige RDDF-Datei separat hochgeladen (dateiweise angegeben, z. B. `upload_rddf.sh -f ./1.rddf` — einen mapId-Parameter gibt es nicht). Punktzahlen pro Karte werden mit dem **Teamnamen** als Schlüssel summiert. (§4.5, §7.5)
 
 ---
 
@@ -634,17 +641,16 @@ die Maschine kann zur Laufzeit ihre Kriechgrenze anwenden. (§4.2, §4.4)
 
 ---
 
-> **F10.** Wie groß ist der Einfluss der mittleren Fehler-Penalty?
+> **F10.** Wie stark wirkt sich der mittlere Fehler auf das Ergebnis aus?
 
-Die Formel lautet `penaltyS = deviationM × 1000` Sekunden. Konkrete Beispiele:
+Je größer der mittlere Fehler, desto schlechter das Ergebnis. Den Gewichtungsfaktor wendet
+der Leaderboard-Server an — die genaue Formel steht in der offiziellen Wettbewerbsordnung.
 
-| Mittlerer CTE | Penalty |
-|--------------:|--------:|
-| 0,1 m | 100 s |
-| 0,5 m | 500 s |
-| 1,0 m | 1000 s |
+In der App sichtbar sind der Wert **LTD (Querabweichung)** im Dashboard und die Spalte `cte`
+in `/tmp/pp_trace.csv`. Wenn sich dieser Wert in einem Kurvenabschnitt kontinuierlich zu
+einer Seite aufbaut, hat dieser Abschnitt die Nachführgrenze des Fahrzeugs überschritten.
 
-→ Lässt sich durch höhere **Waypoint-Dichte in Kurvenabschnitten** und **Minimierung von Heading-Sprüngen** reduzieren. (§7.2)
+→ Lässt sich durch höhere **Waypoint-Dichte in Kurvenabschnitten** und **Minimierung von Heading-Sprüngen** reduzieren. (§7.2, §10.6)
 
 ---
 
@@ -703,10 +709,17 @@ Die Pfadverfolgung ist an einer Stelle gebündelt: `master_of_plow_app/src-gen/A
 AppMain/tracking/
 ├── TrackerTypes.hpp      Koordinaten-/Vorzeichenkonventionen + Datentypen  ← hier anfangen
 ├── IPathTracker.hpp      Der Vertrag, den ein Verfolgungsalgorithmus erfüllen muss
-├── PathTrackerBase.hpp    Basisklasse, die den Boilerplate-Teil bereits umsetzt
-├── SpeedController.hpp    Gang/Gas/Bremse (für alle Algorithmen gemeinsam)
-├── TrackerFactory.*       Name → Implementierung
-├── TrackingLoop.*         Regelschleife (GPS-Umrechnung, Befehle, Telemetrie)
+├── PathTrackerBase.hpp   Basisklasse, die den Boilerplate-Teil bereits umsetzt
+├── SpeedController.hpp   Gang/Gas/Bremse (für alle Algorithmen gemeinsam)
+├── SteeringController.hpp Ausgabe des Lenkbefehls
+├── TrackerFactory.*      Name → Implementierung
+├── TrackerSwitch.*       Tracker-Wechsel zur Laufzeit
+├── TrackingLoop.*        Regelschleife (GPS-Umrechnung, Befehle, Telemetrie)
+├── SampleClock.hpp       Zeitbasis des Regelzyklus
+├── ControlTimeGate.hpp   Gate für den Regelzyklus
+├── GpsSampleStore.hpp    Speicher für GPS-Samples
+├── SignalFreshness.hpp   Bewertung der Signalaktualität
+├── ClockLog.hpp / ClockTelemetry.hpp  Timing-Diagnose
 └── impl/
     ├── PurePursuitTracker.*  Standard-Tracker (der im Wettbewerb tatsächlich fährt)
     └── StanleyTracker.*      Ein zweites, ausgearbeitetes Beispiel
@@ -759,7 +772,7 @@ Das ist der praktischste Teil dieses Abschnitts.
 
 | Eigenschaft des Trackers | So schreibst du dein RDDF |
 |--------------------------|---------------------------|
-| Vorausschaudistanz **5,5–8 m** (skaliert mit der Geschwindigkeit) | Kurven mit engerem Radius werden innen abgeschnitten. Scharfe Wenden entschärfen oder Waypoints dichter setzen |
+| Vorausschaudistanz = **Geschwindigkeit × 9 s**, begrenzt auf `5 m ~ 20 m` (in Kurven kürzer) | Kurven mit engerem Radius werden innen abgeschnitten. Scharfe Wenden entschärfen oder Waypoints dichter setzen |
 | Krümmung als gewichteter Mittelwert über **5 aufeinanderfolgende Punkte** um den nächstgelegenen geschätzt | Zu weite Waypoint-Abstände verschlechtern die Schätzung, sodass Bögen untersteuert werden (§4.4 Regel 4) |
 | Das Anbaugerät läuft **3 m hinter** dem Fahrzeug | `implementFlag`-Wechsel greifen, wenn das Gerät die Stelle passiert — plane an Bahnanfang und -ende etwa 3 m Reserve ein |
 | Verfolgung startet erst **innerhalb von 3 m um Waypoint 0** | Setze den ersten Waypoint auf Punkt A der Karte (§4.4) |

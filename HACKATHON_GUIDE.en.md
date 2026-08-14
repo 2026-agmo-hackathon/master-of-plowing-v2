@@ -12,7 +12,7 @@
 - **Penalties (3 types)**
   - **Reverse in the plowed area** — the plowed state at that location is reset (unplowed)
   - **Leaving the field** — the timer runs **10× faster** while outside the boundary
-  - **Cumulative path error at finish** — the cumulative Cross-Track Error (RMS) is added to the final time
+  - **Path tracking error** — the cumulative Cross-Track Error (RMS) counts against your record
 - **Evaluation**: Both **elapsed time** and **coverage rate (minimizing unplowed area)** contribute to the score.
   - There is **no hard cutoff** such as 95% — you may submit a result at any coverage rate
   - However, a lower coverage rate penalizes your score proportionally
@@ -29,6 +29,7 @@
 | **SeamOS IDE (FeatureDesigner)** | Use the version distributed by the organizers |
 | **Claude Code** | Install the latest version from the official site |
 | **SeamOS Everywhere** | Use the version distributed by the organizers |
+| **SeamOS World (emulator)** | The environment where you actually drive and inspect an RDDF. Use the local install or `seamosworld.seamos.io` |
 
 
 ---
@@ -37,14 +38,19 @@
 
 ```
 master_of_plow/
-├── com.bosch.fsp.master_of_plow/   # FSP (Feature Spec Project)
-├── master_of_plow_app/             # App body (C++ code, config)
-│   └── src-gen/AppMain/tracking/   # Path-tracking skeleton — read-only reference (§10)
-├── master_of_plow_CPP_SDK/         # SeamOS C++ SDK (provided)
-├── customui-src/                   # Dashboard source (React + Vite)
-├── rddf/                           # RDDF area for participants to write/validate
-├── docs/                           # Run orchestration and FIF validation notes
-└── HACKATHON_GUIDE.md              # This document
+├── com.bosch.fsp.master_of_plow/            # FSP (Feature Spec Project)
+├── com.bosch.fsp.master_of_plow.gen/        # Artifacts generated from the FSP
+├── com.bosch.fsp.master_of_plow.gen.tests/  # Generated test artifacts
+├── master_of_plow_app/                      # App body (C++ code, config)
+│   ├── src-gen/AppMain/tracking/            # Path-tracking skeleton (§10)
+│   └── tests/                               # Local test modules
+├── master_of_plow_CPP_SDK/                  # SeamOS C++ SDK (provided)
+├── customui-src/                            # Dashboard source (React + Vite)
+├── rddf/                                    # RDDF area for participants to write/validate
+├── docs/                                    # Run orchestration and FIF validation notes
+├── distribution/                            # Distribution artifacts
+├── seamos-assets/                           # Marketplace images and other assets
+└── HACKATHON_GUIDE.md                       # This document (en · de · th translations included)
 ```
 
 ### 3.1 Opening in SeamOS IDE
@@ -132,8 +138,13 @@ RDDF is automatically validated as soon as it is received from the cloud. Format
 |------|-------------|--------------|
 | **(1) Empty file** | Zero waypoints | Reject |
 | **(2) Speed envelope** | `\|speed\| ≤ 7.0 km/h`; a nonzero magnitude below `2.05 km/h` may be unsustainable | Reject above the ceiling; load low-speed input unchanged and warn |
-| **(3) Waypoint spacing** | Consecutive points satisfy the documented minimum/maximum spacing | Reject with the offending waypoint pair |
-| **(4) Physical curvature** | Compare local geometry with the measured steering limit | Load unchanged and warn about the tracking limit |
+| **(3) Waypoint spacing** | Distance between consecutive points is **at least 0.05 m and at most 5.0 m** | Reject, naming the offending waypoint pair and the actual distance |
+| **(4) Physical curvature** | Curvature measured from the heading change over three consecutive points, compared against the vehicle's minimum turning radius (about **4.35 m**) | Load unchanged and warn about the tracking limit |
+
+> In the code these map to Rule 1 · Rule 2 · Rule 3 · Rule 6 respectively
+> (`RddfValidator.cpp`). The constants live in `RddfValidator.hpp`:
+> `MIN_WAYPOINT_SPACING_M = 0.05`, `MAX_WAYPOINT_SPACING_M = 5.0`,
+> `MAX_MACHINE_SPEED_KMH = 7.0`, `MIN_MACHINE_SPEED_KMH = 2.05`.
 
 #### Behavior on rejection
 
@@ -257,7 +268,8 @@ master_of_plow/rddf/
 ├── 2.rddf                  # Route for field 2
 ├── 3.rddf                  # Route for field 3
 ├── upload_rddf.sh          # Cloud upload script
-└── how-to-upload-rddf.md   # Upload command reference
+├── how-to-upload-rddf.md   # Upload command reference
+└── README.md               # File conventions and validation behaviour
 ```
 
 ### 5.2 Writing an RDDF by Hand
@@ -357,7 +369,7 @@ The script above handles only a **rectangular field with uniform lanes**. To com
 
 - **Non-rectangular field boundary handling** — clip lane lengths to fit non-rectangular field shapes
 - **Separate headland processing** — if the U-turn semicircle exits the field boundary, the **10× timer acceleration** penalty applies
-- **Lane spacing / turn radius optimization** — the tractor's minimum turning radius is approximately 3.28 m; SWATH must be at least that large for smooth U-turns
+- **Lane spacing / turn radius optimization** — the tractor's minimum turning radius is approximately **4.35 m** (`WHEELBASE_M 2.05 / tan(WHEEL_MAX_RAD 0.44)`); SWATH must be at least that large for smooth U-turns
 - **Start/end point** — design the approach path from point A to the first lane
 - **Minimizing unplowed areas** — separately handle small unplowed regions near corners and edges
 
@@ -369,7 +381,9 @@ Before uploading an RDDF, verify the following.
 - [ ] `lineNo` starts at 1 and increments without gaps
 - [ ] Map/session start pose is aligned with waypoint 0 before motion authority (§4.4)
 - [ ] Every `speed` has absolute value **at most 7.0 km/h** (below `2.05 km/h` warns)
-- [ ] Waypoint spacing is appropriate — **two points (start + end) are sufficient for straight segments**; **curve segments should be densely spaced**
+- [ ] Spacing between consecutive waypoints is within **0.05 m ~ 5.0 m** — anything outside that range is rejected (§4.4 rule 3)
+- [ ] Straight segments also carry points at **5 m or closer** — a long straight described by only its start and end point is rejected
+- [ ] Curve segments are dense enough — the higher the curvature, the finer the subdivision
 - [ ] No segments with `speed < 0` over plowed area (avoid reverse penalty)
 - [ ] When transitioning from reverse to forward, **heading reverses** (in-place rotation is not possible)
 - [ ] All reverse segments have `implementFlag` = `0`
@@ -381,7 +395,11 @@ Before uploading an RDDF, verify the following.
 
 ### 6.1 Cloud Upload
 
-Competition evaluation is based on the **RDDF uploaded to the cloud**. Use the `FEU_ID` and `FEATURE_ID` issued by the organizers to upload.
+Competition evaluation is based on the **RDDF uploaded to the cloud**. Upload using the environment file (Postman environment JSON) plus the `FEU_ID` and `FEATURE_ID` issued by the organizers.
+
+> `--env` is required. The environment file holds the keys `tokenUrl`, `baseUrl`, `cp_client_id`,
+> `cp_client_secret`, `feature_id` and `feu_id`; `--feature-id` and `--feu-id` are optional overrides
+> for the values in that file. `jq` and `curl` must be installed.
 
 ```bash
 cd master_of_plow/rddf
@@ -391,6 +409,7 @@ chmod +x ./upload_rddf.sh
 
 # Upload
 ./upload_rddf.sh \
+  --env ./participant-env.json \
   -f ./1.rddf \
   --feu-id <YOUR_FEU_ID> \
   --feature-id <YOUR_FEATURE_ID>
@@ -399,12 +418,7 @@ chmod +x ./upload_rddf.sh
 Example of successful output:
 
 ```
-[1/2] Requesting CP token from https://... ...
-  provider_id (sub) = ...
-[2/2] Uploading './1.rddf'
-       -> .../api/v1/features/<FEATURE_ID>/feu/<FEU_ID>/files
-  Status: 200
-Done.
+Uploaded ./1.rddf (HTTP 200).
 ```
 
 #### Parameter format
@@ -457,46 +471,39 @@ From the participant's perspective, every second spent outside the field adds 10
 
 → When designing headland turns that cross the field boundary, there is a large time penalty. Turn patterns that complete within the field boundary are advantageous.
 
-#### (3) Cumulative path error at finish — final time penalty
+#### (3) Path tracking error — counted against your record
 
-A penalty in seconds proportional to the **Cross-Track Error (CTE) RMS** accumulated during the run is added to the final time.
+The **Cross-Track Error (CTE, RMS)** accumulated during the run counts against your final record.
 
-Code reference (`MainControllerImpl.cpp`, `track_complete` handler):
+Every control cycle the app publishes the lateral deviation (LTD) as telemetry, and on
+completion it reports `track_complete` including the elapsed time. **Scoring and ranking are
+performed by the leaderboard server, not by the app** — follow the official contest rules for
+the exact formula, including its weighting.
 
-```cpp
-RunSummary& rs = getRunSummaryMut();
-rs.elapsedS   = elapsedSAtComplete_;
-rs.penaltyS   = rs.deviationM * 1000.0;   // RMS CTE(m) × 1000
-rs.finalTimeS = rs.elapsedS + rs.penaltyS;
-```
-
-- `deviationM` — Root-mean-square (RMS) of CTE accumulated each tick, in meters
-- `penaltyS` — `deviationM × 1000` seconds
-- `finalTimeS` — `elapsedS + penaltyS`, **the final leaderboard time**
-
-→ An average CTE of **0.1 m** adds **100 seconds**; **0.5 m** adds **500 seconds**.
-→ Sparse curve waypoints or abrupt heading changes cause Pure Pursuit tracking error to spike, dramatically inflating the penalty.
+→ Sparse curve waypoints or abrupt heading changes cause Pure Pursuit tracking error to spike, which worsens your record.
 
 ##### Tips for reducing average error
 
-- **Straight segments** only need **2 points** (start and end) — the tracker follows between those two points, so intermediate points are unnecessary.
+- **Straight segments** do not need dense points, but the spacing ceiling is **5 m** — spread them further apart and the file is rejected (§4.4 rule 3).
 - **Curve segments** should be densely spaced — the higher the curvature, the finer the subdivision.
 - Keep heading changes between adjacent waypoints small (avoid large single-step angle changes, e.g., keep below 15°)
 - It is recommended to add a heading-jump validation step in your own generator
 
 ### 7.3 Winning Criteria
 
-- Both **final time (`finalTimeS = elapsedS + penaltyS`)** and **coverage rate** contribute to the score.
+- **Elapsed time**, **coverage rate** and **path tracking error** all contribute to the score.
 - There is **no minimum coverage rate threshold** (e.g., 95%) that must be met.
 - However, a lower coverage rate is disadvantageous in scoring, so you must **jointly optimize** time reduction, coverage rate, and average error minimization.
-- `finalTimeS` includes both the 10× acceleration due to leaving the field and the cumulative error addition.
+- The 10× acceleration incurred by leaving the field is reflected in the elapsed time as well.
+- Weights and formulas are applied by the leaderboard server, per the official contest rules.
 
 ### 7.4 Evaluation Method
 
 - All evaluation is based on **data recorded in the server leaderboard**.
-- When a simulation is run with a participant's uploaded RDDF, the results (`finalTimeS`, coverage rate, etc.) are automatically aggregated onto the leaderboard.
+- Drive with **REC recording enabled** in the emulator and submit the run record saved on completion to the leaderboard.
+  The submission file is encrypted and can only be opened with the organizers' key. The plain CSV you also receive is for your own analysis.
 - Locally measured time/coverage rate is for reference only; **the official record is the leaderboard value**.
-- There is no separate result submission process — your team's best score recorded on the leaderboard at the deadline is automatically evaluated.
+- Your team's best record on the leaderboard at the deadline is what gets evaluated.
 
 ### 7.5 Run / Connection / Team Name Rules (strictly enforced)
 
@@ -534,15 +541,15 @@ rs.finalTimeS = rs.elapsedS + rs.penaltyS;
         ↓
    ┌─→ [6] Upload to cloud via upload_rddf.sh
    │        ↓
-   │   [7] Run driving session in simulator → measure finalTime / coverage rate
+   │   [7] Turn on REC in the emulator and drive → check elapsed time / plowed area
    │        ↓
-   │   [8] Confirm leaderboard update — your team's best record updates automatically
+   │   [8] Submit the saved run record to the leaderboard → confirm the record updated
    │        ↓
    └── [9] Tune algorithm / parameters → return to 4 or 6
 
    * Repeat the [6]–[9] loop until the deadline, updating the leaderboard each attempt.
-   * There is no separate "final submission" step — your team's best record
-     (summed across maps) on the leaderboard at the deadline is automatically evaluated.
+   * Your team's best record (summed across maps) left on the leaderboard at the
+     deadline is what gets evaluated.
    * If you get stuck between [2] and [3], read §10. Knowing how the tractor
      reacts to a path makes the algorithm design in [3] much easier.
 ```
@@ -565,7 +572,7 @@ Questions are grouped by topic. `(§N)` at the end of each answer refers to the 
 
 > **Q1.** Do you submit a single RDDF file, or one per map?
 
-**Upload one per map.** The competition uses three public maps M1, M2, and M3; upload an RDDF for each map using the corresponding mapId. Per-map scores are summed using the **team name** as the key. (§4.5, §7.5)
+**Upload one per map.** The competition uses three public maps M1, M2, and M3; upload the RDDF file for each map separately (specified per file, e.g. `upload_rddf.sh -f ./1.rddf` — there is no mapId parameter). Per-map scores are summed using the **team name** as the key. (§4.5, §7.5)
 
 ---
 
@@ -634,17 +641,16 @@ machine may apply its runtime creep floor. (§4.2, §4.4)
 
 ---
 
-> **Q10.** How significant is the average error penalty?
+> **Q10.** How much does average error affect the record?
 
-The formula is `penaltyS = deviationM × 1000` seconds. Concrete examples:
+The larger the average error, the worse the record. The weighting is applied by the
+leaderboard server, so check the official contest rules for the exact formula.
 
-| Average CTE | Penalty |
-|------------:|--------:|
-| 0.1 m | 100 s |
-| 0.5 m | 500 s |
-| 1.0 m | 1000 s |
+The values visible from the app are the **LTD (lateral deviation)** on the dashboard and
+the `cte` column in `/tmp/pp_trace.csv`. If that value keeps accumulating to one side on a
+curve, that section exceeded the vehicle's tracking limit.
 
-→ Reduce it by increasing **waypoint density on curves** and **minimizing heading jumps**. (§7.2)
+→ Reduce it by increasing **waypoint density on curves** and **minimizing heading jumps**. (§7.2, §10.6)
 
 ---
 
@@ -703,10 +709,17 @@ Path tracking is collected in one place: `master_of_plow_app/src-gen/AppMain/tra
 AppMain/tracking/
 ├── TrackerTypes.hpp      Frame/sign conventions + the exchanged data types  ← start here
 ├── IPathTracker.hpp      The contract a tracking algorithm must satisfy
-├── PathTrackerBase.hpp    Base class that pre-implements the boilerplate
-├── SpeedController.hpp    Gear/throttle/brake (shared by all algorithms)
-├── TrackerFactory.*       Name → implementation
-├── TrackingLoop.*         Control loop (GPS conversion, command publishing, telemetry)
+├── PathTrackerBase.hpp   Base class that pre-implements the boilerplate
+├── SpeedController.hpp   Gear/throttle/brake (shared by all algorithms)
+├── SteeringController.hpp Publishes the steering command
+├── TrackerFactory.*      Name → implementation
+├── TrackerSwitch.*       Handles tracker switching at runtime
+├── TrackingLoop.*        Control loop (GPS conversion, command publishing, telemetry)
+├── SampleClock.hpp       Time base for the control cycle
+├── ControlTimeGate.hpp   Control-cycle gate
+├── GpsSampleStore.hpp    GPS sample storage
+├── SignalFreshness.hpp   Signal freshness decision
+├── ClockLog.hpp / ClockTelemetry.hpp  Timing diagnostics
 └── impl/
     ├── PurePursuitTracker.*  Default tracker (the one that actually drives in the contest)
     └── StanleyTracker.*      A second worked example
@@ -759,7 +772,7 @@ This is the most practical part of this section.
 
 | Tracker property | Write your RDDF like this |
 |------------------|---------------------------|
-| Lookahead distance is **5.5–8 m** (scales with speed) | Curves with a tighter radius get cut on the inside. Ease sharp turns out, or space waypoints more densely |
+| Lookahead distance = **speed × 9 s**, clamped to `5 m ~ 20 m` (shorter on curves) | Curves with a radius tighter than this get cut on the inside. Ease sharp turns out, or space waypoints more densely |
 | Curvature estimated as a weighted average over **5 consecutive points** around the closest one | Sparse waypoints degrade the curvature estimate, leaving arcs under-steered (§4.4 rule 4) |
 | The implement is **3 m behind** the vehicle | `implementFlag` transitions fire when the implement passes, so allow ~3 m of margin at lane starts and ends |
 | Tracking does not start until the vehicle is **within 3 m of waypoint 0** | Match your first waypoint to the map's point A (§4.4) |
