@@ -69,12 +69,12 @@
     "**/build/**",
     "**/dist/**",
     "**/node_modules/**",
-    "master_of_plow_app/.fif-build-input/**",
     "master_of_plow_app/sdk/**",
     "**/*.fif"
   ],
   "requiredPresent": [
-    "master_of_plow_app/ui/index.html"
+    "master_of_plow_app/ui/index.html",
+    "master_of_plow_app/.fif-build-input/master_of_plow.ecore"
   ],
   "requiredAbsent": [
     "customui-src/build.log",

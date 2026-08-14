@@ -29,21 +29,37 @@ set(MASTER_OF_PLOW_TIMER_MS "100")
 get_filename_component(MASTER_OF_PLOW_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
 set(MASTER_OF_PLOW_ECORE_SOURCE
     "${MASTER_OF_PLOW_ROOT}/com.bosch.fsp.master_of_plow/master_of_plow.ecore")
-# The official IDE builder deliberately mounts only the app at /ws/src. Its
-# staging adapter supplies an exact copy of the authoritative model inside the
-# app tree; accept that copy only when its content hash matches the FSP model.
+# Every SeamOS build path stages or mounts the app directory alone, so the FSP
+# sibling above is not reachable from inside the container. `.fif-build-input/`
+# therefore carries a committed, byte-exact copy of the authoritative model and
+# is the path that actually gets used in a build. It is checked in for that
+# reason — it is a build input, not scratch.
 if(NOT EXISTS "${MASTER_OF_PLOW_ECORE_SOURCE}")
   set(MASTER_OF_PLOW_ECORE_SOURCE
       "${CMAKE_CURRENT_SOURCE_DIR}/.fif-build-input/master_of_plow.ecore")
 endif()
 if(NOT EXISTS "${MASTER_OF_PLOW_ECORE_SOURCE}")
-  message(FATAL_ERROR "Authoritative master_of_plow.ecore is unavailable")
+  message(FATAL_ERROR
+    "master_of_plow.ecore was not found. It is read from "
+    "../com.bosch.fsp.master_of_plow/master_of_plow.ecore when the whole "
+    "project is visible, and otherwise from "
+    "master_of_plow_app/.fif-build-input/master_of_plow.ecore. Restore the "
+    "latter with:\n"
+    "  cp com.bosch.fsp.master_of_plow/master_of_plow.ecore "
+    "master_of_plow_app/.fif-build-input/")
 endif()
+# Accept a copy only when its content hash matches the authoritative model, so a
+# stale one fails loudly instead of silently building against an old model.
 file(SHA256 "${MASTER_OF_PLOW_ECORE_SOURCE}" MASTER_OF_PLOW_ECORE_SHA256)
 if(NOT MASTER_OF_PLOW_ECORE_SHA256 STREQUAL
        "69c28fc2cd2e6eccc952b69cd7e3b48f9851c30d9cb60e77ba5bb4e27c8e11ec")
   message(FATAL_ERROR
-    "Staged master_of_plow.ecore does not match the authoritative FSP model")
+    "master_of_plow.ecore does not match the model this app was generated "
+    "against.\n  file: ${MASTER_OF_PLOW_ECORE_SOURCE}\n  sha256: "
+    "${MASTER_OF_PLOW_ECORE_SHA256}\n"
+    "If you changed the feature model on purpose, regenerate the app sources, "
+    "refresh master_of_plow_app/.fif-build-input/master_of_plow.ecore, and "
+    "update the hash pinned in this file.")
 endif()
 file(READ "${MASTER_OF_PLOW_ECORE_SOURCE}" MASTER_OF_PLOW_ECORE)
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src-gen/AppMain/ApplicationMainImpl.cpp"

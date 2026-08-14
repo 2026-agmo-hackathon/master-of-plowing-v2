@@ -1,0 +1,1230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="nevonex" nsURI="www.bosch.com/nevonex" nsPrefix="nevonex">
+  <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+    <details key="version" value="8.4.18"/>
+  </eAnnotations>
+  <eSubpackages name="common" nsURI="com.bosch.nevonex.common" nsPrefix="common">
+    <eClassifiers xsi:type="ecore:EEnum" name="ProviderEnum">
+      <eLiterals name="CAN_AGMO_Customized_TractorProvider" literal="CAN_AGMO_Customized_TractorProvider"/>
+      <eLiterals name="CAN_AGMO_MTLT305Provider" value="1" literal="CAN_AGMO_MTLT305Provider"/>
+      <eLiterals name="CAN_AGMO_SteerMotorProvider" value="2" literal="CAN_AGMO_SteerMotorProvider"/>
+      <eLiterals name="ISOPGNProvider" value="3" literal="ISOPGNProvider"/>
+      <eLiterals name="Serial_Ext_GPS_NMEA0183Provider" value="4" literal="Serial_Ext_GPS_NMEA0183Provider"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EEnum" name="ConnectionTypeEnum">
+      <eLiterals name="MQTT" literal="MQTT"/>
+      <eLiterals name="CAN" value="1" literal="CAN"/>
+      <eLiterals name="GPIO" value="2" literal="GPIO"/>
+      <eLiterals name="GPS" value="3" literal="GPS"/>
+      <eLiterals name="ISOBUS" value="4" literal="ISOBUS"/>
+      <eLiterals name="Serial" value="5" literal="Serial"/>
+      <eLiterals name="WIFI" value="6" literal="WIFI"/>
+      <eLiterals name="SATELLITE" value="7" literal="SATELLITE"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EEnum" name="PlatformServicesEnum">
+      <eLiterals name="CLOUD_DOWNLOAD" value="0" literal="Cloud_Download"/>
+      <eLiterals name="CLOUD_UPLOAD" value="1" literal="Cloud_Upload"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EEnum" name="HMIServicesEnum">
+      <eLiterals name="CUSTOMUI" literal="com.bosch.nevonex.customui.impl.UIWebServiceProvider"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="IAbsolutePosition" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="AbsolutePosition"/>
+      </eAnnotations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ITopicObject" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="TopicObject"/>
+      </eAnnotations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="AbsolutePosition" eSuperTypes="#//common/IAbsolutePosition">
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="altitude" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"
+          defaultValueLiteral="0.0"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="latitude" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"
+          defaultValueLiteral="0.0"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="longitude" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"
+          defaultValueLiteral="0.0"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="TopicObject" eSuperTypes="#//common/ITopicObject">
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="index" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ICommonFactory" abstract="true" interface="true"/>
+  </eSubpackages>
+  <eSubpackages name="exception" nsURI="com.bosch.nevonex.exception" nsPrefix="exception">
+    <eClassifiers xsi:type="ecore:EClass" name="IExceptionFactory" abstract="true" interface="true"/>
+  </eSubpackages>
+  <eSubpackages name="fcb" nsURI="com.bosch.nevonex.fcb" nsPrefix="fcb">
+    <eClassifiers xsi:type="ecore:EEnum" name="SubscriberEnum">
+      <eLiterals name="FIL" literal="FIL"/>
+      <eLiterals name="FGF" value="1" literal="FGF"/>
+      <eLiterals name="ALL" value="2" literal="ALL"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="IFCALController" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="FCALController"/>
+      </eAnnotations>
+      <eOperations name="setMachineUpdate">
+        <eParameters name="machine" eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EObject"/>
+        <eParameters name="attribute" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        <eParameters name="payload" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject"/>
+        <eParameters name="details" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject"/>
+        <eParameters name="timestamp" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong"/>
+      </eOperations>
+      <eOperations name="publish">
+        <eParameters name="interfaceKey" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        <eParameters name="interfaceName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        <eParameters name="payloadValue" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject"/>
+        <eParameters name="subscriber" eType="#//fcb/SubscriberEnum"/>
+      </eOperations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="FCALController">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="FCALController"/>
+      </eAnnotations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="IConnectionFactory" abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="ConnectionFactory"/>
+    <eClassifiers xsi:type="ecore:EClass" name="IPublishConnectionFactory" abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="PublishConnectionFactory"/>
+    <eClassifiers xsi:type="ecore:EClass" name="ISubscribeConnectionFactory" abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="SubscribeConnectionFactory"/>
+    <eClassifiers xsi:type="ecore:EClass" name="IFcbFactory" abstract="true" interface="true"/>
+  </eSubpackages>
+  <eSubpackages name="fcal" nsURI="com.bosch.nevonex.fcal" nsPrefix="fcal">
+    <eClassifiers xsi:type="ecore:EClass" name="IBulkProcessor" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="BulkProcessor"/>
+      </eAnnotations>
+      <eOperations name="executeBulkOperations"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="BulkProcessor">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="BulkProcessor"/>
+      </eAnnotations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="IFcalFactory" abstract="true" interface="true"/>
+<eClassifiers xsi:type="ecore:EClass" name="RECEIVE_ACC_INFO_T_R" eSuperTypes="#//types/IArrayType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Return type of Receive_ACC_INFO"/>
+        <details key="arrayfeatures" value="tRZ_ACC_SIG1_V,tRZ_ACC_SIG2_V,tRZ_ACC_DIAG,tRZ_ACC_AUTO"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_ACC_SIG1_V" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_ACC_SIG2_V" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_ACC_DIAG" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_ACC_AUTO" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+<eClassifiers xsi:type="ecore:EClass" name="RECEIVE_FNR_INFO_T_R" eSuperTypes="#//types/IArrayType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Return type of Receive_FNR_INFO"/>
+        <details key="arrayfeatures" value="tRZ_FNR_SIG1_V,tRZ_FNR_SIG2_V,tRZ_FNR_DIAG,tRZ_FNR_AUTO,tRZ_FNR_STATE"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_FNR_SIG1_V" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_FNR_SIG2_V" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_FNR_DIAG" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_FNR_AUTO" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_FNR_STATE" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+<eClassifiers xsi:type="ecore:EClass" name="RECEIVE_HYD_INFO_T_R" eSuperTypes="#//types/IArrayType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Return type of Receive_HYD_INFO"/>
+        <details key="arrayfeatures" value="tRZ_HYD_SIG1_V,tRZ_HYD_SIG2_V,tRZ_HYD_DIAG,tRZ_HYD_AUTO"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_HYD_SIG1_V" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_HYD_SIG2_V" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_HYD_DIAG" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_HYD_AUTO" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+<eClassifiers xsi:type="ecore:EClass" name="RECEIVE_SFT_INFO_T_R" eSuperTypes="#//types/IArrayType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Return type of Receive_SFT_INFO"/>
+        <details key="arrayfeatures" value="tRZ_SFT_SIG1_V,tRZ_SFT_SIG2_V,tRZ_SFT_DIAG,tRZ_SFT_AUTO,tRZ_SFT_STATE"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_SFT_SIG1_V" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_SFT_SIG2_V" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_SFT_DIAG" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_SFT_AUTO" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="tRZ_SFT_STATE" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+<eClassifiers xsi:type="ecore:EClass" name="AGMO_GENERIC_SEND_CMD_T_W" eSuperTypes="#//types/IArrayType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Return type of AGMO's generic Send Command"/>
+        <details key="arrayfeatures" value="aD_Generic_Cmd,aD_Generic_Mode_Cmd"/>
+      </eAnnotations>
+      <eOperations name="initialize">
+        <eParameters name="aD_Generic_Cmd" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+        <eParameters name="aD_Generic_Mode_Cmd" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+      </eOperations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="aD_Generic_Cmd" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Write"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="aD_Generic_Mode_Cmd"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Write"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+<eClassifiers xsi:type="ecore:EClass" name="ACEINNA_ACCEL_T_R" eSuperTypes="#//types/IArrayType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Return type for Aceinna_Accel"/>
+        <details key="arrayfeatures" value="accY,accX,accZ,lateralAcc_FigureOfMerit,longiAcc_FigureOfMerit,verticAcc_FigureOfMerit,support_Rate_Acc"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="accY" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="accX" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="accZ" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="lateralAcc_FigureOfMerit"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="longiAcc_FigureOfMerit"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="verticAcc_FigureOfMerit"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="support_Rate_Acc" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+<eClassifiers xsi:type="ecore:EClass" name="ACEINNA_ANGLERATE_T_R" eSuperTypes="#//types/IArrayType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Return type for Aceinna_AngleRate"/>
+        <details key="arrayfeatures" value="gyroY,gyroX,gyroZ,gyroY_FigureOfMerit,gyroX_FigureOfMerit,gyroZ_FigureOfMerit,angleRate_Latency"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="gyroY" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="gyroX" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="gyroZ" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="gyroY_FigureOfMerit"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="gyroX_FigureOfMerit"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="gyroZ_FigureOfMerit"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="angleRate_Latency" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+<eClassifiers xsi:type="ecore:EClass" name="ACEINNA_ANGLES_T_R" eSuperTypes="#//types/IArrayType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Return type for Aceinna_Angles"/>
+        <details key="arrayfeatures" value="pitch,roll,pitch_Compensation,pitch_FigureOfMerit,roll_Compensation,roll_FigureOfMerit,pitchRoll_Latency"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="pitch" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="roll" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="pitch_Compensation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="pitch_FigureOfMerit"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="roll_Compensation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="roll_FigureOfMerit" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="pitchRoll_Latency" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+<eClassifiers xsi:type="ecore:EClass" name="MOTOR_HEARTBEAT_T_R" eSuperTypes="#//types/IArrayType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Return type for Motor Request"/>
+        <details key="arrayfeatures" value="heartbeat_ControlStatus_HallFailure,heartbeat_ControlStatus_CANdisconnected,heartbeat_ControlStatus_MotorStalled,heartbeat_ControlStatus_Disabled,heartbeat_ControlStatus_Overvoltage,heartbeat_ControlStatus_HardwareProtection,heartbeat_ControlStatus_E2PROM,heartbeat_ControlStatus_Undervoltage,heartbeat_ControlStatus_Overcurrent,heartbeat_ControlStatus_ModeFailure"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="heartbeat_ControlStatus_HallFailure"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="heartbeat_ControlStatus_CANdisconnected"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="heartbeat_ControlStatus_MotorStalled"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="heartbeat_ControlStatus_Disabled"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="heartbeat_ControlStatus_Overvoltage"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="heartbeat_ControlStatus_HardwareProtection"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="heartbeat_ControlStatus_E2PROM"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="heartbeat_ControlStatus_Undervoltage"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="heartbeat_ControlStatus_Overcurrent"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="heartbeat_ControlStatus_ModeFailure"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+<eClassifiers xsi:type="ecore:EClass" name="RAW_CAN_DATA_DLC_8_W" eSuperTypes="#//types/IArrayType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Return type for raw CAN data with DLC = 8"/>
+        <details key="arrayfeatures" value="byte0,byte1,byte2,byte3,byte4,byte5,byte6,byte7"/>
+      </eAnnotations>
+      <eOperations name="initialize">
+        <eParameters name="byte0" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+        <eParameters name="byte1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+        <eParameters name="byte2" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+        <eParameters name="byte3" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+        <eParameters name="byte4" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+        <eParameters name="byte5" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+        <eParameters name="byte6" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+        <eParameters name="byte7" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+      </eOperations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="byte0" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Write"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="byte1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Write"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="byte2" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Write"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="byte3" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Write"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="byte4" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Write"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="byte5" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Write"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="byte6" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Write"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="byte7" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Write"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+<eClassifiers xsi:type="ecore:EClass" name="GPS_NMEA0183_T_R" eSuperTypes="#//types/IArrayType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Return type for NMEA0183 GPS data"/>
+        <details key="arrayfeatures" value="uTC_ms,latitude,longitude,gPS_Quality_Indicator,no_Satellites,altitude,geoidal_Separation,dGPS_Age,differential_Ref_Station,selection_Mode,fix_Type,pDOP,hDOP,vDOP,status,speed,course,magnetic_variation,fAA_Mode_Indicator,heading,headingTrue"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="uTC_ms" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+          defaultValueLiteral="">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="latitude" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"
+          defaultValueLiteral="0.0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="longitude" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"
+          defaultValueLiteral="0.0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="gPS_Quality_Indicator"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="no_Satellites" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="altitude" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="geoidal_Separation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="dGPS_Age" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="differential_Ref_Station"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="selection_Mode" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+          defaultValueLiteral="">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="fix_Type" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="pDOP" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="hDOP" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="vDOP" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="status" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="speed" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="course" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="magnetic_variation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="fAA_Mode_Indicator" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+          defaultValueLiteral="">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="heading" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat"
+          defaultValueLiteral="0.0f">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="headingTrue" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+          defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="access" value="Read"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+  </eSubpackages>
+  <eSubpackages name="types" nsURI="com.bosch.nevonex.types" nsPrefix="types">
+    <eClassifiers xsi:type="ecore:EClass" name="IArrayType" abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EDataType" name="File" instanceClassName="java.io.File"/>
+    <eClassifiers xsi:type="ecore:EClass" name="IPropertyChange" abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="ITypesFactory" abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="PropertyChange" eSuperTypes="#//types/IPropertyChange">
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="listeners" upperBound="-1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject"/>
+      <eOperations name="addPropertyChangeListener">
+        <eParameters name="_listener" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject"/>
+      </eOperations>
+      <eOperations name="removePropertyChangeListener">
+        <eParameters name="_listener" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject"/>
+      </eOperations>
+      <eOperations name="notifyPropertyChange">
+        <eParameters name="_name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        <eParameters name="_oldValue" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject"/>
+        <eParameters name="_newValue" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject"/>
+      </eOperations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="IMachine"/>
+    <eClassifiers xsi:type="ecore:EClass" name="IMachineProvider">
+      <eStructuralFeatures xsi:type="ecore:EReference" name="controller" eType="#//fcb/FCALController"/>
+      <eOperations name="createMachines">
+        <eParameters name="_stream" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject"/>
+      </eOperations>
+      <eOperations name="constructChildTypes">
+        <eParameters name="_parent" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject"/>
+        <eParameters name="_parentObj" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject"/>
+        <eParameters name="_path" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      </eOperations>
+      <eOperations name="initMachineProvider"/>
+      <eOperations name="getTopicElement" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject">
+        <eParameters name="_index" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      </eOperations>
+      <eOperations name="stopMachineProvider"/>
+    </eClassifiers>
+  </eSubpackages>
+  <eSubpackages name="customui" nsURI="com.bosch.nevonex.customui" nsPrefix="customui">
+    <eClassifiers xsi:type="ecore:EEnum" name="PortEnum">
+      <eLiterals name="HTTP" value="8080" literal="HTTP"/>
+      <eLiterals name="WS" value="8081" literal="WS"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="IAbstractWebsocketEndPoint" abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="AbstractWebsocketEndPoint"/>
+    <eClassifiers xsi:type="ecore:EClass" name="INevonexRoute" abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="NevonexRoute"/>
+    <eClassifiers xsi:type="ecore:EClass" name="IUIWebServiceProvider" abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="UIWebServiceProvider"/>
+    <eClassifiers xsi:type="ecore:EClass" name="ICustomuiFactory" abstract="true" interface="true"/>
+  </eSubpackages>
+  <eSubpackages name="cloud" nsURI="com.bosch.nevonex.cloud" nsPrefix="cloud">
+    <eClassifiers xsi:type="ecore:EClass" name="ICloudDownload" instanceClassName="com.bosch.fsp.runtime.feature.ICloudDownload"
+        abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="Cloud" eSuperTypes="#//cloud/ICloudDownload #//types/PropertyChange">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="Cloud_Download" value="true"/>
+      </eAnnotations>
+      <eOperations name="processDownloadMessage">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="It processes the message/file received from cloud."/>
+        </eAnnotations>
+        <eParameters name="message" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      </eOperations>
+      <eOperations name="initPlatformService" eExceptions="#//exception/MachineInitException"/>
+      <eOperations name="startPlatformService" eExceptions="#//exception/MachineInitException"/>
+      <eOperations name="stopPlatformService" eExceptions="#//exception/NevonexException"/>
+      <eOperations name="getFilePath" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Returns file path of latest downloaded file. (ICloudDownload contract)"/>
+        </eAnnotations>
+      </eOperations>
+      <eOperations name="uploadData" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+          eExceptions="#//exception/CloudBadRequestException #//exception/CloudUnAuthorizedException #//exception/CloudAccessDeniedException #//exception/CloudConnectionException #//exception/PlatformServiceException #//exception/FileNotFoundException #//exception/IOException">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Uploads given data to Nevonex Cloud"/>
+        </eAnnotations>
+        <eParameters name="data" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Data to be uploaded"/>
+          </eAnnotations>
+        </eParameters>
+        <eParameters name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Priority of the upload 1. High, 2. Medium, 3.Low"/>
+          </eAnnotations>
+        </eParameters>
+      </eOperations>
+      <eOperations name="uploadData" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+          eExceptions="#//exception/CloudBadRequestException #//exception/CloudUnAuthorizedException #//exception/CloudAccessDeniedException #//exception/CloudConnectionException #//exception/PlatformServiceException #//exception/FileNotFoundException #//exception/IOException">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Uploads given data to Nevonex Cloud using wifi or satellite based on the selected connection type."/>
+        </eAnnotations>
+        <eParameters name="data" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Data to be uploaded"/>
+          </eAnnotations>
+        </eParameters>
+        <eParameters name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Priority of the upload 1. High, 2. Medium, 3.Low"/>
+          </eAnnotations>
+        </eParameters>
+        <eParameters name="connectionType" eType="#//common/ConnectionTypeEnum">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Type of communication which should be used for uploading data. The allowable connection types are WIFI,SATELLITE. If this value is null WIFI is selected by default."/>
+          </eAnnotations>
+        </eParameters>
+      </eOperations>
+      <eOperations name="uploadFile" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+          eExceptions="#//exception/CloudBadRequestException #//exception/CloudUnAuthorizedException #//exception/CloudAccessDeniedException #//exception/CloudConnectionException #//exception/PlatformServiceException #//exception/FileNotFoundException #//exception/IOException">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Uploads given file to Nevonex Cloud"/>
+        </eAnnotations>
+        <eParameters name="file" eType="#//types/File">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="File which has to be uploaded"/>
+          </eAnnotations>
+        </eParameters>
+        <eParameters name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Priority of the upload 1. High, 2. Medium, 3.Low"/>
+          </eAnnotations>
+        </eParameters>
+      </eOperations>
+      <eOperations name="uploadFile" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+          eExceptions="#//exception/CloudBadRequestException #//exception/CloudUnAuthorizedException #//exception/CloudAccessDeniedException #//exception/CloudConnectionException #//exception/PlatformServiceException #//exception/FileNotFoundException #//exception/IOException">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Uploads given file to Nevonex Cloud"/>
+        </eAnnotations>
+        <eParameters name="filePath" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Absolute Path of the file"/>
+          </eAnnotations>
+        </eParameters>
+        <eParameters name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Priority of the upload 1. High, 2. Medium, 3.Low"/>
+          </eAnnotations>
+        </eParameters>
+      </eOperations>
+      <eOperations name="uploadFile" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+          eExceptions="#//exception/CloudBadRequestException #//exception/CloudUnAuthorizedException #//exception/CloudAccessDeniedException #//exception/CloudConnectionException #//exception/PlatformServiceException #//exception/FileNotFoundException #//exception/IOException">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Uploads given file to Nevonex Cloud"/>
+        </eAnnotations>
+        <eParameters name="file" eType="#//types/File">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="File which has to be uploaded"/>
+          </eAnnotations>
+        </eParameters>
+        <eParameters name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Priority of the upload 1. High, 2. Medium, 3.Low"/>
+          </eAnnotations>
+        </eParameters>
+        <eParameters name="connectionType" eType="#//common/ConnectionTypeEnum">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Type of communication which should be used for uploading File. The allowable connection types are WIFI,SATELLITE. If this value is null WIFI is selected by default."/>
+          </eAnnotations>
+        </eParameters>
+      </eOperations>
+      <eOperations name="uploadFile" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+          eExceptions="#//exception/CloudBadRequestException #//exception/CloudUnAuthorizedException #//exception/CloudAccessDeniedException #//exception/CloudConnectionException #//exception/PlatformServiceException #//exception/FileNotFoundException #//exception/IOException">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Uploads given file to Nevonex Cloud"/>
+        </eAnnotations>
+        <eParameters name="filePath" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Absolute Path of the file"/>
+          </eAnnotations>
+        </eParameters>
+        <eParameters name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Priority of the upload 1. High, 2. Medium, 3.Low"/>
+          </eAnnotations>
+        </eParameters>
+        <eParameters name="connectionType" eType="#//common/ConnectionTypeEnum">
+          <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+            <details key="documentation" value="Type of communication which should be used for uploading File. The allowable connection types are WIFI,SATELLITE. If this value is null WIFI is selected by default."/>
+          </eAnnotations>
+        </eParameters>
+      </eOperations>
+    </eClassifiers>
+  </eSubpackages>
+  <eSubpackages name="can_agmo_customized_tractor" nsURI="com.bosch.nevonex.can_agmo_customized_tractor" nsPrefix="can_agmo_customized_tractor">
+    <eClassifiers xsi:type="ecore:EClass" name="ICAN_AGMO_Customized_Tractor" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="Machine"/>
+        <details key="containedIn" value="CAN_AGMO_Customized_TractorProvider"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="receive_ACC_INFO" eType="#//fcal/RECEIVE_ACC_INFO_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9455;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="receive_FNR_INFO" eType="#//fcal/RECEIVE_FNR_INFO_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9456;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="receive_HYD_INFO" eType="#//fcal/RECEIVE_HYD_INFO_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9457;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="receive_SFT_INFO" eType="#//fcal/RECEIVE_SFT_INFO_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9459;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="send_ACC_CMD" eType="#//fcal/AGMO_GENERIC_SEND_CMD_T_W">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9460;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="send_FNR_CMD" eType="#//fcal/AGMO_GENERIC_SEND_CMD_T_W">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9461;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="send_HYD_CMD" eType="#//fcal/AGMO_GENERIC_SEND_CMD_T_W">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9462;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="send_SFT_CMD" eType="#//fcal/AGMO_GENERIC_SEND_CMD_T_W">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9464;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="CAN_AGMO_Customized_Tractor" eSuperTypes="#//common/TopicObject">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="Machine"/>
+        <details key="interfaceDetails" value="fek/9455;fek/9456;fek/9457;fek/9459;"/>
+        <details key="interfaceDetailsType" value="9455/ARRAY_TYPE/RECEIVE_ACC_INFO_T_R;9456/ARRAY_TYPE/RECEIVE_FNR_INFO_T_R;9457/ARRAY_TYPE/RECEIVE_HYD_INFO_T_R;9459/ARRAY_TYPE/RECEIVE_SFT_INFO_T_R;"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="receive_ACC_INFO" eType="#//fcal/RECEIVE_ACC_INFO_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9455;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="receive_FNR_INFO" eType="#//fcal/RECEIVE_FNR_INFO_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9456;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="receive_HYD_INFO" eType="#//fcal/RECEIVE_HYD_INFO_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9457;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="receive_SFT_INFO" eType="#//fcal/RECEIVE_SFT_INFO_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9459;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="send_ACC_CMD" eType="#//fcal/AGMO_GENERIC_SEND_CMD_T_W">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9460;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="send_FNR_CMD" eType="#//fcal/AGMO_GENERIC_SEND_CMD_T_W">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9461;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="send_HYD_CMD" eType="#//fcal/AGMO_GENERIC_SEND_CMD_T_W">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9462;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="send_SFT_CMD" eType="#//fcal/AGMO_GENERIC_SEND_CMD_T_W">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9464;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ICAN_AGMO_Customized_TractorProvider" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="MachineProvider"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="cAN_AGMO_Customized_Tractor" eType="#//can_agmo_customized_tractor/ICAN_AGMO_Customized_Tractor" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="CAN_AGMO_Customized_TractorProvider">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="MachineProvider"/>
+      </eAnnotations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ICan_agmo_customized_tractorFactory" abstract="true" interface="true"/>
+  </eSubpackages>
+  <eSubpackages name="can_agmo_mtlt305" nsURI="com.bosch.nevonex.can_agmo_mtlt305" nsPrefix="can_agmo_mtlt305">
+    <eClassifiers xsi:type="ecore:EClass" name="ICAN_AGMO_MTLT305" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="Machine"/>
+        <details key="containedIn" value="CAN_AGMO_MTLT305Provider"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="aceinna_Accel" eType="#//fcal/ACEINNA_ACCEL_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9440;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="aceinna_AngleRate" eType="#//fcal/ACEINNA_ANGLERATE_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9441;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="aceinna_Angles" eType="#//fcal/ACEINNA_ANGLES_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9442;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="CAN_AGMO_MTLT305" eSuperTypes="#//common/TopicObject">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="Machine"/>
+        <details key="interfaceDetails" value="fek/9440;fek/9441;fek/9442;"/>
+        <details key="interfaceDetailsType" value="9440/ARRAY_TYPE/ACEINNA_ACCEL_T_R;9441/ARRAY_TYPE/ACEINNA_ANGLERATE_T_R;9442/ARRAY_TYPE/ACEINNA_ANGLES_T_R;"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="aceinna_Accel" eType="#//fcal/ACEINNA_ACCEL_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9440;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="aceinna_AngleRate" eType="#//fcal/ACEINNA_ANGLERATE_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9441;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="aceinna_Angles" eType="#//fcal/ACEINNA_ANGLES_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9442;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ICAN_AGMO_MTLT305Provider" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="MachineProvider"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="cAN_AGMO_MTLT305" eType="#//can_agmo_mtlt305/ICAN_AGMO_MTLT305" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="CAN_AGMO_MTLT305Provider">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="MachineProvider"/>
+      </eAnnotations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ICan_agmo_mtlt305Factory" abstract="true" interface="true"/>
+  </eSubpackages>
+  <eSubpackages name="can_agmo_steermotor" nsURI="com.bosch.nevonex.can_agmo_steermotor" nsPrefix="can_agmo_steermotor">
+    <eClassifiers xsi:type="ecore:EClass" name="ICAN_AGMO_SteerMotor" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="Machine"/>
+        <details key="containedIn" value="CAN_AGMO_SteerMotorProvider"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="motor_Heartbeat" eType="#//fcal/MOTOR_HEARTBEAT_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9428;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="motor_Request" eType="#//fcal/RAW_CAN_DATA_DLC_8_W">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9436;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="motor_Response_Encoder_Speed" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9434;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="motor_Response_EncoderCountValue" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat" defaultValueLiteral="0.0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9435;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="CAN_AGMO_SteerMotor" eSuperTypes="#//common/TopicObject">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="Machine"/>
+        <details key="interfaceDetails" value="fek/9428;fek/9434;fek/9435;"/>
+        <details key="interfaceDetailsType" value="9428/ARRAY_TYPE/MOTOR_HEARTBEAT_T_R;9434/INT_TYPE/Motor_Response_Encoder_Speed;9435/FLOAT_TYPE/Motor_Response_EncoderCountValue;"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="motor_Heartbeat" eType="#//fcal/MOTOR_HEARTBEAT_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9428;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="motor_Request" eType="#//fcal/RAW_CAN_DATA_DLC_8_W">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9436;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="motor_Response_Encoder_Speed" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9434;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="motor_Response_EncoderCountValue" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat" defaultValueLiteral="0.0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9435;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ICAN_AGMO_SteerMotorProvider" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="MachineProvider"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="cAN_AGMO_SteerMotor" eType="#//can_agmo_steermotor/ICAN_AGMO_SteerMotor" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="CAN_AGMO_SteerMotorProvider">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="MachineProvider"/>
+      </eAnnotations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ICan_agmo_steermotorFactory" abstract="true" interface="true"/>
+  </eSubpackages>
+  <eSubpackages name="isopgn" nsURI="com.bosch.nevonex.isopgn" nsPrefix="isopgn">
+    <eClassifiers xsi:type="ecore:EClass" name="IISOPGN" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="Machine"/>
+        <details key="containedIn" value="ISOPGNProvider"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="hitchPosPerRe" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat" defaultValueLiteral="0.0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/251;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ISOPGN" eSuperTypes="#//common/TopicObject">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="Machine"/>
+        <details key="interfaceDetails" value="fek/251;"/>
+        <details key="interfaceDetailsType" value="251/FLOAT_TYPE/HitchPosPerRe;"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="hitchPosPerRe" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat" defaultValueLiteral="0.0">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/251;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="IISOPGNProvider" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="MachineProvider"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="iSOPGN" eType="#//isopgn/IISOPGN" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ISOPGNProvider">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="MachineProvider"/>
+      </eAnnotations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="IIsopgnFactory" abstract="true" interface="true"/>
+  </eSubpackages>
+  <eSubpackages name="serial_ext_gps_nmea0183" nsURI="com.bosch.nevonex.serial_ext_gps_nmea0183" nsPrefix="serial_ext_gps_nmea0183">
+    <eClassifiers xsi:type="ecore:EClass" name="ISerial_Ext_GPS_NMEA0183" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="Machine"/>
+        <details key="containedIn" value="Serial_Ext_GPS_NMEA0183Provider"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="serial_Ext_GPS_NMEA0183_Data" eType="#//fcal/GPS_NMEA0183_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9465;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="Serial_Ext_GPS_NMEA0183" eSuperTypes="#//common/TopicObject">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="Machine"/>
+        <details key="interfaceDetails" value="fek/9465;"/>
+        <details key="interfaceDetailsType" value="9465/ARRAY_TYPE/GPS_NMEA0183_T_R;"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="serial_Ext_GPS_NMEA0183_Data" eType="#//fcal/GPS_NMEA0183_T_R">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="interfaceDetails" value="fek/9465;"/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ISerial_Ext_GPS_NMEA0183Provider" abstract="true" interface="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="MachineProvider"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="serial_Ext_GPS_NMEA0183" eType="#//serial_ext_gps_nmea0183/ISerial_Ext_GPS_NMEA0183" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="Serial_Ext_GPS_NMEA0183Provider">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="role" value="MachineProvider"/>
+      </eAnnotations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ISerial_ext_gps_nmea0183Factory" abstract="true" interface="true"/>
+  </eSubpackages>
+  <eSubpackages name="main" nsURI="com.bosch.nevonex.main" nsPrefix="main">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="Provider" value="CAN_AGMO_Customized_Tractor provider:can_agmo_customized_tractor,CAN_AGMO_MTLT305 provider:can_agmo_mtlt305,CAN_AGMO_SteerMotor provider:can_agmo_steermotor,ISOPGN provider:isopgn,Serial_Ext_GPS_NMEA0183 provider:serial_ext_gps_nmea0183"/>
+      <details key="AppControllerName" value="MainController"/>
+      <details key="Timer" value="100"/>
+      <details key="isCustomUI" value="true"/>
+      <details key="hasUserControls" value="false"/>
+      <details key="UDInputListeners" value=""/>
+      <details key="PlatformServices" value="Download,Upload Data,Upload File"/>
+    </eAnnotations>
+    <eClassifiers xsi:type="ecore:EClass" name="ApplicationMain">
+      <eOperations name="addListenersForUserDefinedControls">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="This method adds property change listeners for user defined widgets which are created using feature designer to this generated feature application."/>
+        </eAnnotations>
+      </eOperations>
+      <eOperations name="initializeMachineProviders">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="This method initializes the machines which are required to run the feature with their corresponding dom providers."/>
+        </eAnnotations>
+        <eParameters name="provider" eType="#//main/MachineProvider"/>
+      </eOperations>
+      <eOperations name="addProcessTimer">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="This method schedules the runnable controller class to be called in given particular interval of time."/>
+        </eAnnotations>
+      </eOperations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="timerTriggered" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="MachineProvider" instanceClassName="com.bosch.fsp.runtime.feature.IMachineProvider"
+        abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="PropertyChangeListener" instanceClassName="java.beans.PropertyChangeListener"
+        abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="Runnable" instanceClassName="java.lang.Runnable"
+        abstract="true" interface="true"/>
+    <eClassifiers xsi:type="ecore:EClass" name="ApplicationInputData">
+      <eStructuralFeatures xsi:type="ecore:EReference" name="cAN_AGMO_Customized_Tractor" eType="#//main/CAN_AGMO_Customized_Tractor"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="cAN_AGMO_MTLT305" eType="#//main/CAN_AGMO_MTLT305"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="cAN_AGMO_SteerMotor" eType="#//main/CAN_AGMO_SteerMotor"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="iSOPGN" eType="#//main/ISOPGN"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="platform_Service" eType="#//main/Platform_Service"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="serial_Ext_GPS_NMEA0183" eType="#//main/Serial_Ext_GPS_NMEA0183"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="MainController" eSuperTypes="#//main/Runnable #//main/ApplicationInputData">
+      <eOperations name="run"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="FeatureManagerListener"/>
+    <eClassifiers xsi:type="ecore:EClass" name="IgnitionStateListener"/>
+    <eClassifiers xsi:type="ecore:EClass" name="MachineConnectListener"/>
+    <eClassifiers xsi:type="ecore:EClass" name="IController"/>
+    <eClassifiers xsi:type="ecore:EClass" name="CloudDownloadListener"/>
+    <eClassifiers xsi:type="ecore:EClass" name="SampleGetService">
+      <eStructuralFeatures xsi:type="ecore:EReference" name="controller" eType="#//main/MainController"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="SamplePostService">
+      <eStructuralFeatures xsi:type="ecore:EReference" name="controller" eType="#//main/MainController"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="SamplePutService">
+      <eStructuralFeatures xsi:type="ecore:EReference" name="controller" eType="#//main/MainController"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="SampleDeleteService">
+      <eStructuralFeatures xsi:type="ecore:EReference" name="controller" eType="#//main/MainController"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="UIWebsocketEndPoint"/>
+    <eClassifiers xsi:type="ecore:EClass" name="CAN_AGMO_Customized_Tractor"/>
+    <eClassifiers xsi:type="ecore:EClass" name="CAN_AGMO_MTLT305"/>
+    <eClassifiers xsi:type="ecore:EClass" name="CAN_AGMO_SteerMotor"/>
+    <eClassifiers xsi:type="ecore:EClass" name="ISOPGN"/>
+    <eClassifiers xsi:type="ecore:EClass" name="Platform_Service"/>
+    <eClassifiers xsi:type="ecore:EClass" name="Serial_Ext_GPS_NMEA0183"/>
+  </eSubpackages>
+</ecore:EPackage>
