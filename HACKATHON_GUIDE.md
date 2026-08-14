@@ -23,12 +23,50 @@
 
 ## 2. 사전 준비물
 
-| 항목 | 비고 |
-|------|------|
-| **SeamOS IDE (FeatureDesigner)** | 운영진 배포 버전 사용 |
-| **Claude Code** | 공식 홈페이지 최신 버전 설치 |
-| **SeamOS Everywhere** | 운영진 배포 버전 사용 |
-| **SeamOS World (에뮬레이터)** | RDDF를 실제로 주행·확인하는 환경. 로컬 설치판 또는 `seamosworld.seamos.io` 사용 |
+| 항목 | 용도 | 설치 |
+|------|------|------|
+| **SeamOS World (에뮬레이터)** | RDDF를 실제로 주행·채점 확인하는 환경. **가장 먼저 깔아야 합니다** | 아래 2.1 |
+| **SeamOS IDE (FeatureDesigner)** | 앱 빌드·FIF 패키징 | [docs.seamos.io/docs/3/5/1](https://docs.seamos.io/docs/3/5/1) |
+| **Claude Code** | AI 개발 에이전트 | [claude.com/claude-code](https://claude.com/claude-code) |
+| **SeamOS Everywhere** | Claude Code 플러그인 (SeamOS 개발 스킬셋) | [docs.seamos.io/docs/3/7/install-config](https://docs.seamos.io/docs/3/7/install-config) · [GitHub](https://github.com/AGMO-Inc/seamos-everywhere) |
+
+RDDF 만 작성해 제출하는 경우 **SeamOS World 하나만 있으면 됩니다.** IDE·Claude Code·Everywhere 는
+앱 코드까지 직접 손볼 때 필요합니다.
+
+### 2.1 SeamOS World 설치
+
+지원 OS 는 **macOS(Apple Silicon)** 와 **Ubuntu 22.04 이상** 입니다. 설치되는 것은 런처
+스크립트뿐이고, 4.4 GB VM 이미지는 첫 `seamosworld start` 에서 자동으로 받습니다(최초 1회).
+
+**macOS (Apple Silicon)**
+
+```bash
+brew install agmo-inc/seamosworld/seamosworld
+seamosworld start
+```
+
+**Ubuntu**
+
+첫 줄은 저장소 등록입니다. 한 번만 하면 됩니다.
+
+```bash
+echo 'deb [trusted=yes] https://seamosworld-dist-795591862191.s3.ap-northeast-2.amazonaws.com/apt stable main' \
+  | sudo tee /etc/apt/sources.list.d/seamosworld.list
+sudo apt update && sudo apt install seamosworld
+seamosworld start
+```
+
+시작되면 브라우저에서 `http://localhost:3000` 으로 대시보드에 접속합니다.
+
+```bash
+seamosworld status     # 서비스 상태
+seamosworld stop       # 종료
+seamosworld --help     # 전체 명령
+```
+
+> x86_64 Ubuntu 에서는 CCU 가상머신이 ARM 소프트웨어 에뮬레이션(TCG)으로 돌아 CPU 를 많이
+> 씁니다. 코어 수·클럭이 높을수록 유리합니다. 최소·권장 사양과 체감 성능은
+> [system-requirements.md](docs/hackathon-2026/system-requirements.md) 참고.
 
 
 ---
@@ -45,7 +83,6 @@ master_of_plow/
 │   └── tests/                            # 로컬 테스트 모듈
 ├── master_of_plow_CPP_SDK/               # SeamOS C++ SDK (제공)
 ├── customui-src/                         # 대시보드 소스 (React + Vite)
-├── rddf/                                 # 참가자가 작성/검증하는 RDDF 영역
 ├── docs/                                 # 실행 오케스트레이션 · FIF 검증 문서
 ├── distribution/                         # 배포 산출물
 ├── seamos-assets/                        # 마켓플레이스 이미지 등 자산
@@ -143,12 +180,15 @@ RDDF는 클라우드에서 수신되는 즉시 자동 검증을 거칩니다. �
 | **속도 상한** | `\|speed\| ≤ 7.0 km/h` | 초과 시 거부 |
 | **속도 하한** | 0이 아닌 `2.05 km/h` 미만 | 원본 그대로 적재하고 경고 |
 | **웨이포인트 간격** (Rule 3) | 인접 두 점의 거리가 **0.05 m 이상 5.0 m 이하** | 해당 웨이포인트 쌍과 실제 거리를 명시해 거부 |
-| **물리 곡률** (Rule 6) | 연속 3점의 방위 변화로 곡률을 재고 차량 최소 회전 반경(약 **4.35 m**)과 비교 | 원본 그대로 적재하고 추종 한계 경고 |
+| **물리 곡률** (Rule 6) | 연속 3점의 방위 변화로 곡률을 재고 추종 모델의 최소 회전 반경과 비교 | 원본 그대로 적재하고 추종 한계 경고 |
 
 > 상수는 `RddfValidator.hpp` 의 `MIN_WAYPOINT_SPACING_M = 0.05`,
 > `MAX_WAYPOINT_SPACING_M = 5.0`, `MAX_MACHINE_SPEED_KMH = 7.0`,
 > `MIN_MACHINE_SPEED_KMH = 2.05` 이고, 최소 회전 반경은
-> `WHEELBASE_M / tan(WHEEL_MAX_RAD)` 로 트래커 상수에서 그대로 계산합니다.
+> `WHEELBASE_M / tan(WHEEL_MAX_RAD)` 로 트래커 상수에서 계산합니다.
+> 이 경고선은 트래커 모델 고정값이라 **실제로 고른 트랙터의 최소선회반경과 다를 수 있습니다.**
+> 경로를 설계할 때는 [tractor-specs.md](docs/hackathon-2026/tractor-specs.md) 의 체급별
+> `최소선회반경` 을 기준으로 잡으세요 — 경고가 없어도 못 도는 코너가 있을 수 있습니다.
 > 거부는 **첫 위반 지점에서 즉시 중단**되므로, 한 번에 하나씩만 사유가 나옵니다.
 
 #### 거부 시 동작
@@ -233,26 +273,27 @@ lon = 126.978 + x / (111320 x cos(37.5665°))
 | 문서 | 내용 |
 |------|------|
 | [maps.md](docs/hackathon-2026/maps.md) | 맵 크기·GPS 원점·`workArea`/`driveArea` **폴리곤 전체 좌표**·경작 채점 기준(0.2 m 셀, 완료 0.999) |
-| [terrain.md](docs/hackathon-2026/terrain.md) | 노면 마찰·견인 한계·경작 저항의 수식과 값 |
-| [tractor-specs.md](docs/hackathon-2026/tractor-specs.md) | 트랙터 3종(소형·중형·대형) 물리 제원 |
+| [tractor-specs.md](docs/hackathon-2026/tractor-specs.md) | 트랙터 3종(소형·중형·대형) 제원 — **최소선회반경·축거·조향 한계** |
+| [implement-specs.md](docs/hackathon-2026/implement-specs.md) | 작업기 5종 제원(작업 폭·작업 깊이)과 경작 저항·경작도 적립식 |
+| [terrain.md](docs/hackathon-2026/terrain.md) | 노면 물성 — 토양·마찰계수·견인 한계·구름저항 |
 | [rddf-format.md](docs/hackathon-2026/rddf-format.md) | RDDF 포맷 명세 |
-| [signal-flow.md](docs/hackathon-2026/signal-flow.md) | 앱이 센서 신호를 받고 지령을 보내는 경로 |
-| [system-requirements.md](docs/hackathon-2026/system-requirements.md) | 참가자 PC 요구 사양 |
+| [system-requirements.md](docs/hackathon-2026/system-requirements.md) | 참가자 PC 요구 사양과 OS 별(macOS·Ubuntu) 설치 |
 
 ---
 
 ## 5. RDDF 작성 워크플로
 
-### 5.1 디렉터리 구조
+### 5.1 산출물
+
+참가자가 만드는 것은 **`.rddf` 파일 하나**입니다. 저장 위치는 자유이고, 파일 이름도 자유입니다.
+맵마다 따로 만들어 맵별로 각각 주행합니다.
 
 ```
-master_of_plow/rddf/
-├── 1.rddf                  # 필드 1 경로
-├── 2.rddf                  # 필드 2 경로
-├── 3.rddf                  # 필드 3 경로
-├── upload_rddf.sh          # 클라우드 업로드 스크립트
-├── how-to-upload-rddf.md   # 업로드 명령어 메모
-└── README.md               # 파일 규약과 검증 동작 요약
+<본인 작업 폴더>/
+├── gen_rddf.py     # 본인이 만드는 생성기 (언어 자유)
+├── m1.rddf         # M1 용 경로
+├── m2.rddf         # M2 용 경로
+└── m3.rddf         # M3 용 경로
 ```
 
 ### 5.2 RDDF 직접 작성
@@ -277,14 +318,16 @@ master_of_plow/rddf/
 U-turn** 으로 다음 레인에 진입합니다. 후진을 쓰지 않으므로 정지·재가속 시간을
 아낄 수 있습니다.
 
-**바로 옆 레인으로 도는 단순 왕복은 불가능합니다.** 옆 레인 반원의 반경은
-`SWATH / 2` 인데, SWATH 가 4 m 면 반경 2 m 로 차량 최소 회전 반경 **4.35 m**
-보다 작습니다. 조향이 끝까지 물려도 못 돌고 코너 밖으로 밀려납니다.
+**바로 옆 레인으로 도는 단순 왕복은 불가능합니다.** 옆 레인 반원의 반경은 `SWATH / 2` 인데,
+SWATH 가 4 m 면 반경 2 m 입니다. 어느 트랙터를 골라도 최소선회반경보다 작습니다. 조향이
+끝까지 물려도 못 돌고 코너 밖으로 밀려납니다.
 
-그래서 레인을 **건너뛰며** 돕니다. `d` 칸 떨어진 레인으로 돌면 반원 반경이
-`d × SWATH / 2` 이므로, 모든 선회에서 이 값이 4.35 m 이상이어야 합니다.
+그래서 레인을 **건너뛰며** 돕니다. `d` 칸 떨어진 레인으로 돌면 반원 반경이 `d × SWATH / 2`
+이므로, 모든 선회에서 이 값이 **본인이 쓸 트랙터의 최소선회반경 이상**이어야 합니다.
+값은 체급마다 다르니 [tractor-specs.md](docs/hackathon-2026/tractor-specs.md) 의
+`최소선회반경` 행에서 직접 확인하세요 — 트랙터를 바꾸면 이 제약도 바뀝니다.
 
-레인을 **앞 절반과 뒤 절반으로 나눠 번갈아** 방문하면 이 조건이 항상 성립합니다.
+레인을 **앞 절반과 뒤 절반으로 나눠 번갈아** 방문하면 간격이 최대한 벌어집니다.
 레인이 7개면 방문 순서는 `0, 4, 1, 5, 2, 6, 3` 이고 인접 간격이 4·3·4·3·4·3 이라
 가장 작은 선회 반경도 `3 × 4 / 2 = 6 m` 입니다.
 
@@ -294,14 +337,14 @@ U-turn** 으로 다음 레인에 진입합니다. 후진을 쓰지 않으므로 
         └──── 앞 절반 ────┘└─ 뒤 절반 ─┘
 
   ↑ 레인 0 ─────────╮
-                    │  반경 = (간격 레인 수) × SWATH / 2  ≥ 4.35 m
+                    │  반경 = (간격 레인 수) × SWATH / 2  ≥ 최소선회반경
   ↓ 레인 4 ─────────╯
 ```
 
-간격의 최솟값은 `앞절반 레인 수 − 1` 이므로, 이 패턴이 성립하려면 농지가
-`SWATH × (2 × 4.35 / SWATH + 1)` 보다 넓어야 합니다. 더 좁은 농지라면 반원
-U-turn 자체를 쓸 수 없고, 경계 밖으로 나가는 Ω-turn(→ Outside 감점)이나
-3점 선회(→ 후진 구간 발생)를 검토해야 합니다.
+간격의 최솟값은 `앞절반 레인 수 − 1` 이므로, 이 패턴이 성립하려면 농지 폭이
+`2 × 최소선회반경 + SWATH` 보다 넓어야 합니다. 더 좁은 농지라면 반원 U-turn 자체를
+쓸 수 없고, 경계 밖으로 나가는 Ω-turn(→ Outside 감점)이나 3점 선회(→ 후진 구간 발생)를
+검토해야 합니다.
 
 #### 최소 동작 예시 코드 (`gen_rddf.py`)
 
@@ -322,8 +365,11 @@ def to_latlon(x_m, y_m):
     return (LAT0 + y_m / M_PER_DEG_LAT,
             LON0 + x_m / M_PER_DEG_LON)
 
-# --- 차량 물리 한계 (RddfValidator 와 같은 값) ---
-MIN_TURN_R  = 4.35     # WHEELBASE_M 2.05 / tan(WHEEL_MAX_RAD 0.44)
+# --- 차량 물리 한계 ---
+# MIN_TURN_R 은 본인이 쓸 트랙터의 최소선회반경으로 바꾸세요.
+#   docs/hackathon-2026/tractor-specs.md 의 "최소선회반경" 행
+#   (소형 JD 5050E / 중형 JD 6100M / 대형 JD 6155M 이 각각 다릅니다)
+MIN_TURN_R  = 4.9      # 예: 대형 JD 6155M
 MAX_SPACING = 5.0      # 인접 웨이포인트 최대 간격 (초과 시 파일 거부)
 
 # --- 파라미터 ---
@@ -409,13 +455,13 @@ print(f"{len(waypoints)} waypoints, {n_lanes} lanes, "
 - **헤드랜드 채우기** — 위 예제가 남긴 위아래 띠를 마지막에 별도 패스로 갈기. 그냥 두면 Coverage 가 그만큼 깎입니다
 - **선회를 농지 안에서 끝내기** — 반원이 경계를 넘어가면 그 면적이 **Outside**, 그 시간이 **Outside Time** 으로 감점됩니다 (§7.2)
 - **중복 최소화** — 이미 완료된 셀을 다시 지나면 **Duplicate**, 기작업 면적을 바퀴로 밟고 있으면 **Retread** 로 감점됩니다
-- **레인 간격 / 선회 반경 최적화** — 최소 회전 반경 **4.35 m** 를 만족하는 선에서 `LANE_SKIP` 을 줄이면 전이 거리가 짧아집니다
+- **레인 간격 / 선회 반경 최적화** — 트랙터의 최소선회반경을 만족하는 선에서 레인 간격을 줄이면 전이 거리가 짧아집니다. 작은 트랙터를 고르면 반경 제약이 느슨해지지만 작업 폭도 좁아집니다
 - **시작/종료 지점** — 맵 spawn 지점에서 첫 레인까지의 진입 경로 설계
 - **미경지 최소화** — 코너·경계 부근의 작은 미경지 영역을 별도로 처리
 
 ### 5.4 검증 체크리스트
 
-RDDF를 업로드하기 전 다음을 확인하세요.
+RDDF를 앱에 넣기 전 다음을 확인하세요.
 
 - [ ] 9개 컬럼, **탭 구분**으로 모든 라인이 일관된가
 - [ ] `lineNo`가 1부터 빠짐없이 증가하는가
@@ -426,60 +472,84 @@ RDDF를 업로드하기 전 다음을 확인하세요.
 - [ ] 곡선 구간은 충분히 촘촘한가 — 곡률이 클수록 더 잘게 분할
 - [ ] 후진 → 전진 전환 시 **헤딩이 반전**되는가 (제자리 회전 불가)
 - [ ] 모든 후진 구간의 `implementFlag`가 `0`인가
-- [ ] 선회 반경이 **4.35 m** 이상인가 — 그보다 급하면 트랙터가 물리적으로 못 돕니다 (§4.4)
+- [ ] 선회 반경이 **본인이 쓸 트랙터의 최소선회반경** 이상인가 — 그보다 급하면 물리적으로 못 돕니다 ([tractor-specs.md](docs/hackathon-2026/tractor-specs.md))
 - [ ] U-turn 경로가 농지 경계 밖으로 벗어나지 않는가 (Outside · Outside Time 감점, §7.2)
 
 ---
 
 ## 6. 앱에 RDDF 반영하기
 
-### 6.1 클라우드 업로드
+만든 `.rddf` 를 실행 중인 앱에 밀어 넣는 방법은 두 가지입니다. 둘 다 **클라우드가 파일을
+내려보내는 경로를 그대로 태우므로**, 앱 입장에서는 실제 대회 환경과 똑같습니다.
 
-대회 평가는 **클라우드에 업로드된 RDDF**를 기준으로 동작합니다. 운영진이 발급한 환경 파일(Postman environment JSON)과 `FEU_ID`, `FEATURE_ID`를 사용해 업로드합니다.
+### 6.1 CLI — `seamosworld send-file`
 
-> `--env`는 필수입니다. 환경 파일에는 `tokenUrl`, `baseUrl`, `cp_client_id`, `cp_client_secret`,
-> `feature_id`, `feu_id` 키가 들어 있으며, `--feature-id` · `--feu-id`는 파일 값을 덮어쓰는 선택 옵션입니다.
-> `jq`와 `curl`이 설치되어 있어야 합니다.
+가장 확실한 방법입니다. 생성기를 돌린 뒤 바로 이어 붙일 수 있어 반복 작업에 편합니다.
 
 ```bash
-cd master_of_plow/rddf
-
-# 실행 권한 부여 (최초 1회)
-chmod +x ./upload_rddf.sh
-
-# 업로드
-./upload_rddf.sh \
-  --env ./participant-env.json \
-  -f ./1.rddf \
-  --feu-id <YOUR_FEU_ID> \
-  --feature-id <YOUR_FEATURE_ID>
+seamosworld send-file ./m1.rddf --draw-path
 ```
 
-성공 출력 예:
+| 옵션 | 뜻 |
+|------|-----|
+| `-f`, `--feature <id>` | 보낼 대상 feature id. 생략하면 실행 중인 feature 로 보냅니다 |
+| `-n`, `--name <name>` | 앱이 보게 될 파일 이름. 생략하면 원본 파일명 |
+| `--draw-path` | 시뮬레이터 화면에 경로를 초록 선으로 같이 그립니다 |
 
+feature 를 명시하려면 이렇게 씁니다.
+
+```bash
+seamosworld send-file ./m1.rddf --feature NVX_FE_MOP_REF --draw-path
 ```
-Uploaded ./1.rddf (HTTP 200).
-```
 
-#### 파라미터 형식
+`--draw-path` 를 붙이면 주행 전에 경로가 의도대로 그려졌는지 눈으로 먼저 확인할 수 있습니다.
+경로가 농지 밖으로 튀어나가거나 레인이 어긋난 것은 대부분 여기서 바로 보입니다.
 
-```
-FEU_ID 예시      : abcdefgh-abcd-abcd-1234-abcd1234abcd
-FEATURE_ID 예시  : 10234dev
-```
+![RDDF 경로가 그려진 시뮬레이터 화면](docs/images/sim-rddf-path.png)
 
-#### 자주 발생하는 오류
+- **초록 리본** — 방금 보낸 RDDF 경로. 흰 화살표가 진행 방향입니다
+- **빨간 선** — `workArea` 경계. 채점 대상 구획입니다 (§4.5)
+- 왼쪽 위 `CONTROLS` 에서 맵과 트랙터를 고릅니다. 배속(1x~6x)도 여기 있습니다
+- 아래 계기판에서 속도·기어·작업기·히치 상태를 봅니다
 
-| 증상 | 원인 / 해결 |
-|------|-------------|
-| `jq is required` | `sudo apt install jq` 또는 `brew install jq` |
-| `Status: 401` | FEU_ID / FEATURE_ID 오타 또는 만료 — 운영진 문의 |
-| `Status: 4xx` (파일 거부) | RDDF 포맷 오류 — 5.4 체크리스트 재검증 |
-| `Status: 5xx` | 서버 일시 장애 — 잠시 후 재시도, 지속 시 운영진 문의 |
+### 6.2 드래그 앤 드롭
 
-### 6.2 업로드 후 확인
+시뮬레이터 화면에 `.rddf` 파일을 그대로 끌어다 놓으면 됩니다. 파일 하나를 빠르게 확인할 때
+편합니다. 화면 어디에 놓아도 되고, 놓는 즉시 위 그림처럼 경로가 그려집니다.
 
-업로드 후 앱은 `CloudDownloadListener`를 통해 RDDF를 받아 `RddfParser`로 파싱합니다. 시뮬레이터에서 트랙터가 의도한 경로를 따라가는지 확인합니다.
+### 6.3 반영 후 확인
+
+앱은 파일을 받아 `RddfParser` 로 파싱하고 §4.4 의 자동 검증을 거칩니다.
+
+- 검증에 걸리면 **"RDDF Validation Error" 다이얼로그**가 즉시 뜨고 거부 사유가 그대로 나옵니다.
+  사유에 맞춰 고친 뒤 다시 보내세요.
+- 다이얼로그가 뜨지 않으면 검증을 통과한 것입니다. 트랙터가 의도한 경로를 따라가는지
+  시뮬레이터에서 확인합니다.
+- 주행 권한은 차량의 실제 자세가 웨이포인트 0 과 맞아야 나옵니다 — 맵 spawn 좌표는 §4.5 표에 있습니다.
+
+### 6.4 주행과 기록 (REC)
+
+경로가 제대로 그려졌으면 실제로 주행합니다.
+
+1. `CONTROLS` 에서 **맵**과 **트랙터**를 고릅니다. 트랙터 체급에 따라 최소선회반경이 달라지므로
+   RDDF 를 만들 때 정한 것과 같은 트랙터를 고르세요 ([tractor-specs.md](docs/hackathon-2026/tractor-specs.md)).
+2. **작업기(Implement)** 를 답니다. 주행 중에는 바꾸면 안 됩니다 — 바꾸면 그 기록은 무효입니다 (§7.3).
+3. **REC 을 켜고** 주행을 시작합니다.
+4. 주행이 끝나면 REC 을 멈추고 기록을 내려받습니다. 제출용은 봉인본 **`.csv.enc`** 이고,
+   함께 받는 평문 CSV 는 본인 분석용입니다 (§7.5).
+
+**녹화 중에는 키보드를 건드리지 마세요.** 조향을 잡거나 가속·제동을 한 번만 눌러도 그 주행
+전체가 무효 처리됩니다 (§7.3).
+
+주행 중 화면은 이렇게 보입니다.
+
+![경작 커버리지가 표시된 화면](docs/images/sim-coverage.png)
+
+- **빨간 반투명 면** — `workArea`. 이 안쪽만 점수로 집계됩니다
+- **초록 띠** — 완료 기준(경작도 0.999)을 넘긴 구간
+- **노란 띠** — 지나갔지만 깊이가 모자라 아직 완료가 아닌 구간. 히치를 더 내려야 합니다
+- 계기판의 `IMPLEMENT` 와 `HITCH` 가 실제 경작 깊이를 정합니다
+  ([implement-specs.md](docs/hackathon-2026/implement-specs.md))
 
 ---
 
@@ -627,7 +697,7 @@ REC 중에는 키보드로 트랙터를 조작하지 마세요. 조향을 잡거
 ```
 [1] 레포 클론 & IDE Import & 빌드 통과 확인
         ↓
-[2] rddf/1.rddf 샘플을 업로드해 시뮬레이터에서 트랙터 거동 관찰
+[2] 간단한 직선 RDDF 를 하나 보내 시뮬레이터에서 트랙터 거동 관찰
         ↓
 [3] 알고리즘 설계 — 레인 폭, 헤드랜드 처리, 선회 패턴 결정
         ↓
@@ -635,7 +705,7 @@ REC 중에는 키보드로 트랙터를 조작하지 마세요. 조향을 잡거
         ↓
 [5] 생성된 RDDF → §5.4 체크리스트 통과 확인
         ↓
-   ┌─→ [6] upload_rddf.sh로 클라우드 업로드
+   ┌─→ [6] seamosworld send-file 로 앱에 반영 (--draw-path 로 경로 확인)
    │        ↓
    │   [7] 에뮬레이터에서 REC 을 켜고 주행 → 경과 시간 / 경운 면적 확인
    │        (녹화 중 키보드 조작 금지 — 한 번이라도 만지면 무효)
@@ -669,7 +739,7 @@ REC 중에는 키보드로 트랙터를 조작하지 마세요. 조향을 잡거
 
 > **Q1.** RDDF 파일은 하나만 제출하나요? 아니면 맵별로?
 
-**맵별로 각각 업로드.** 대회는 M1·M2·M3 세 개 맵을 사용하며, 맵마다 해당 RDDF 파일을 따로 업로드합니다(`upload_rddf.sh -f ./1.rddf` 처럼 파일 단위로 지정하며, 별도의 mapId 파라미터는 없습니다). 맵별 점수는 **팀 이름**을 키로 합산됩니다. (§4.5, §7.5)
+**맵별로 각각 업로드.** 대회는 M1·M2·M3 세 개 맵을 사용하며, 맵마다 RDDF 를 따로 만들어 각각 주행합니다(`seamosworld send-file ./m1.rddf` 처럼 파일 단위로 보내며, 별도의 mapId 파라미터는 없습니다). 맵별 점수는 **팀 이름**을 키로 합산됩니다. (§4.5, §7.5)
 
 ---
 
