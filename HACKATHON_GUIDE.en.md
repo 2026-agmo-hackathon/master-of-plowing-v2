@@ -23,13 +23,51 @@
 
 ## 2. Prerequisites
 
-| Item | Notes |
-|------|-------|
-| **SeamOS IDE (FeatureDesigner)** | Use the version distributed by the organizers |
-| **Claude Code** | Install the latest version from the official site |
-| **SeamOS Everywhere** | Use the version distributed by the organizers |
-| **SeamOS World (emulator)** | The environment where you actually drive and inspect an RDDF. Use the local install or `seamosworld.seamos.io` |
+| Item | Purpose | Install |
+|------|---------|---------|
+| **SeamOS World (emulator)** | Where you actually drive an RDDF and check the score. **Install this first** | §2.1 below |
+| **SeamOS IDE (FeatureDesigner)** | App build and FIF packaging | [docs.seamos.io/docs/3/5/1](https://docs.seamos.io/docs/3/5/1) |
+| **Claude Code** | AI development agent | [claude.com/claude-code](https://claude.com/claude-code) |
+| **SeamOS Everywhere** | Claude Code plugin (SeamOS development skill set) | [docs.seamos.io/docs/3/7/install-config](https://docs.seamos.io/docs/3/7/install-config) · [GitHub](https://github.com/AGMO-Inc/seamos-everywhere) |
 
+If you are only authoring and submitting RDDFs, **SeamOS World alone is enough.** The IDE,
+Claude Code and Everywhere are needed when you also modify the app code.
+
+### 2.1 Installing SeamOS World
+
+Supported operating systems are **macOS (Apple Silicon)** and **Ubuntu 22.04 or newer**. Only a
+launcher script is installed; the 4.4 GB VM image downloads automatically on the first
+`seamosworld start` (once).
+
+**macOS (Apple Silicon)**
+
+```bash
+brew install agmo-inc/seamosworld/seamosworld
+seamosworld start
+```
+
+**Ubuntu**
+
+The first line registers the repository. You only need it once.
+
+```bash
+echo 'deb [trusted=yes] https://seamosworld-dist-795591862191.s3.ap-northeast-2.amazonaws.com/apt stable main' \
+  | sudo tee /etc/apt/sources.list.d/seamosworld.list
+sudo apt update && sudo apt install seamosworld
+seamosworld start
+```
+
+Once it is up, open the dashboard at `http://localhost:3000`.
+
+```bash
+seamosworld status     # service status
+seamosworld stop       # shut down
+seamosworld --help     # all commands
+```
+
+> On x86_64 Ubuntu the CCU virtual machine runs under ARM software emulation (TCG) and uses a
+> lot of CPU. More cores and higher clocks help. Minimum/recommended specs and real-world feel
+> are in [system-requirements.md](docs/hackathon-2026/system-requirements.md).
 
 ---
 
@@ -45,7 +83,6 @@ master_of_plow/
 │   └── tests/                               # Local test modules
 ├── master_of_plow_CPP_SDK/                  # SeamOS C++ SDK (provided)
 ├── customui-src/                            # Dashboard source (React + Vite)
-├── rddf/                                    # RDDF area for participants to write/validate
 ├── docs/                                    # Run orchestration and FIF validation notes
 ├── distribution/                            # Distribution artifacts
 ├── seamos-assets/                           # Marketplace images and other assets
@@ -145,12 +182,16 @@ RDDF is automatically validated as soon as it is received from the cloud. Format
 | **Speed ceiling** | `\|speed\| ≤ 7.0 km/h` | Reject above the ceiling |
 | **Speed floor** | A nonzero magnitude below `2.05 km/h` | Load unchanged and warn |
 | **Waypoint spacing** (Rule 3) | Distance between consecutive points is **at least 0.05 m and at most 5.0 m** | Reject, naming the offending waypoint pair and the actual distance |
-| **Physical curvature** (Rule 6) | Curvature measured from the heading change over three consecutive points, compared against the vehicle's minimum turning radius (about **4.35 m**) | Load unchanged and warn about the tracking limit |
+| **Physical curvature** (Rule 6) | Curvature measured from the heading change over three consecutive points, compared against the tracking model's minimum turning radius | Load unchanged and warn about the tracking limit |
 
 > The constants live in `RddfValidator.hpp`: `MIN_WAYPOINT_SPACING_M = 0.05`,
 > `MAX_WAYPOINT_SPACING_M = 5.0`, `MAX_MACHINE_SPEED_KMH = 7.0`,
 > `MIN_MACHINE_SPEED_KMH = 2.05`; the minimum turning radius is computed as
-> `WHEELBASE_M / tan(WHEEL_MAX_RAD)` straight from the tracker constants.
+> `WHEELBASE_M / tan(WHEEL_MAX_RAD)` from the tracker constants.
+> That warning threshold is fixed to the tracking model, so it **may differ from the minimum
+> turning radius of the tractor you actually pick.** Design your route against the per-class
+> `minimum turning radius` in [tractor-specs.md](docs/hackathon-2026/tractor-specs.md) — a corner
+> can be undrivable even when no warning fires.
 > Rejection **stops at the first violation**, so only one reason is reported at a time.
 
 #### Behavior on rejection
@@ -237,26 +278,27 @@ Full polygon coordinates, surface properties and tractor specs live in separate 
 | Document | Contents |
 |----------|----------|
 | [maps.md](docs/hackathon-2026/maps.md) | Map sizes, GPS origin, **full `workArea`/`driveArea` polygon coordinates**, tillage scoring basis (0.2 m cells, 0.999 completion) |
-| [terrain.md](docs/hackathon-2026/terrain.md) | Surface friction, traction limits and tillage-resistance formulas with values |
-| [tractor-specs.md](docs/hackathon-2026/tractor-specs.md) | Physical specs of the three tractors (small · medium · large) |
+| [tractor-specs.md](docs/hackathon-2026/tractor-specs.md) | Specs of the three tractors — **minimum turning radius, wheelbase, steering limits** |
+| [implement-specs.md](docs/hackathon-2026/implement-specs.md) | Specs of the five implements (working width, working depth), draft force and tillage accumulation |
+| [terrain.md](docs/hackathon-2026/terrain.md) | Surface properties — soil, friction coefficients, traction limits, rolling resistance |
 | [rddf-format.md](docs/hackathon-2026/rddf-format.md) | RDDF format specification |
-| [signal-flow.md](docs/hackathon-2026/signal-flow.md) | How your app receives sensor signals and sends commands |
-| [system-requirements.md](docs/hackathon-2026/system-requirements.md) | Participant PC requirements |
+| [system-requirements.md](docs/hackathon-2026/system-requirements.md) | Participant PC requirements and per-OS (macOS · Ubuntu) installation |
 
 ---
 
 ## 5. RDDF Authoring Workflow
 
-### 5.1 Directory Structure
+### 5.1 What You Produce
+
+What you author is **a single `.rddf` file**. Put it wherever you like and name it whatever you
+like. Make one per map and drive each map separately.
 
 ```
-master_of_plow/rddf/
-├── 1.rddf                  # Route for field 1
-├── 2.rddf                  # Route for field 2
-├── 3.rddf                  # Route for field 3
-├── upload_rddf.sh          # Cloud upload script
-├── how-to-upload-rddf.md   # Upload command reference
-└── README.md               # File conventions and validation behaviour
+<your working folder>/
+├── gen_rddf.py     # your own generator (any language)
+├── m1.rddf         # route for M1
+├── m2.rddf         # route for M2
+└── m3.rddf         # route for M3
 ```
 
 ### 5.2 Writing an RDDF by Hand
@@ -283,11 +325,14 @@ stop-and-re-accelerate time.
 
 **A plain back-and-forth into the adjacent lane is impossible.** That semicircle has a
 radius of `SWATH / 2`, which at SWATH = 4 m is 2 m — well below the vehicle's minimum
-turning radius of **4.35 m**. The steering goes to full lock and the vehicle still runs
-wide of the corner.
+minimum turning radius — of any tractor you can pick. The steering goes to full lock and the
+vehicle still runs wide of the corner.
 
 So the turns **skip lanes**. Turning into a lane `d` lanes away gives a radius of
-`d × SWATH / 2`, and that must be at least 4.35 m on every turn.
+`d × SWATH / 2`, and on every turn that must be **at least the minimum turning radius of the
+tractor you will drive**. It differs per size class, so read it off the
+`minimum turning radius` row in [tractor-specs.md](docs/hackathon-2026/tractor-specs.md) —
+change tractor and this constraint changes with it.
 
 Visiting the **front half and back half of the lanes alternately** guarantees this. With
 7 lanes the visiting order is `0, 4, 1, 5, 2, 6, 3`; the gaps are 4, 3, 4, 3, 4, 3, so
@@ -299,12 +344,12 @@ order:  1    3    5    7    2    4    6
         └──── front half ────┘└─ back half ─┘
 
   ↑ lane 0 ─────────╮
-                    │  radius = (lane gap) × SWATH / 2  ≥ 4.35 m
+                    │  radius = (lane gap) × SWATH / 2  ≥ min turning radius
   ↓ lane 4 ─────────╯
 ```
 
 The smallest gap equals `front-half lane count − 1`, so this pattern requires the field
-to be wider than `SWATH × (2 × 4.35 / SWATH + 1)`. On a narrower field a semicircular
+to be wider than `2 × minimum turning radius + SWATH`. On a narrower field a semicircular
 U-turn is not usable at all, and you have to consider an omega turn that leaves the
 boundary (→ Outside deductions) or a three-point turn (→ a reverse segment).
 
@@ -327,8 +372,11 @@ def to_latlon(x_m, y_m):
     return (LAT0 + y_m / M_PER_DEG_LAT,
             LON0 + x_m / M_PER_DEG_LON)
 
-# --- Vehicle physical limits (same values as RddfValidator) ---
-MIN_TURN_R  = 4.35     # WHEELBASE_M 2.05 / tan(WHEEL_MAX_RAD 0.44)
+# --- Vehicle physical limits ---
+# Set MIN_TURN_R to the minimum turning radius of the tractor you will drive.
+#   See the "minimum turning radius" row in docs/hackathon-2026/tractor-specs.md
+#   (small JD 5050E / medium JD 6100M / large JD 6155M all differ)
+MIN_TURN_R  = 4.9      # e.g. large JD 6155M
 MAX_SPACING = 5.0      # max spacing between waypoints (over this the file is rejected)
 
 # --- Parameters ---
@@ -415,13 +463,13 @@ score you will need to replace the following with your own algorithm:
 - **Filling the headland** — cover the strips the example leaves behind with a final separate pass. Left alone they come straight off your Coverage score
 - **Finishing turns inside the field** — a semicircle that crosses the boundary costs you **Outside** for the area and **Outside Time** for the time (§7.2)
 - **Minimizing duplication** — passing over an already-completed cell counts as **Duplicate**, and wheels sitting on worked ground count as **Retread** (§7.2)
-- **Lane spacing / turn radius optimization** — shrinking the lane gap shortens the transitions, as long as every turn stays at or above the **4.35 m** minimum radius
+- **Lane spacing / turn radius optimization** — shrinking the lane gap shortens the transitions, as long as every turn stays at or above your tractor's minimum turning radius. A smaller tractor loosens the radius constraint but also narrows the working width
 - **Start/end point** — design the approach path from the map spawn point to the first lane
 - **Minimizing unplowed areas** — separately handle small unplowed regions near corners and edges
 
 ### 5.4 Validation Checklist
 
-Before uploading an RDDF, verify the following.
+Before sending an RDDF to the app, verify the following.
 
 - [ ] Every line has exactly 9 columns with **tab delimiters**
 - [ ] `lineNo` starts at 1 and increments without gaps
@@ -432,60 +480,86 @@ Before uploading an RDDF, verify the following.
 - [ ] Curve segments are dense enough — the higher the curvature, the finer the subdivision
 - [ ] When transitioning from reverse to forward, **heading reverses** (in-place rotation is not possible)
 - [ ] All reverse segments have `implementFlag` = `0`
-- [ ] Every turn radius is at least **4.35 m** — anything tighter the tractor physically cannot drive (§4.4)
+- [ ] Every turn radius is at least **your tractor's minimum turning radius** — anything tighter it physically cannot drive ([tractor-specs.md](docs/hackathon-2026/tractor-specs.md))
 - [ ] The U-turn path does not stray outside the field boundary (Outside · Outside Time deductions, §7.2)
 
 ---
 
 ## 6. Applying the RDDF to the App
 
-### 6.1 Cloud Upload
+There are two ways to push your `.rddf` into the running app. Both ride **exactly the path the
+cloud uses to deliver a file**, so from the app's point of view it is identical to the real
+competition environment.
 
-Competition evaluation is based on the **RDDF uploaded to the cloud**. Upload using the environment file (Postman environment JSON) plus the `FEU_ID` and `FEATURE_ID` issued by the organizers.
+### 6.1 CLI — `seamosworld send-file`
 
-> `--env` is required. The environment file holds the keys `tokenUrl`, `baseUrl`, `cp_client_id`,
-> `cp_client_secret`, `feature_id` and `feu_id`; `--feature-id` and `--feu-id` are optional overrides
-> for the values in that file. `jq` and `curl` must be installed.
+The reliable way, and easy to chain right after your generator for repeat runs.
 
 ```bash
-cd master_of_plow/rddf
-
-# Grant execute permission (once only)
-chmod +x ./upload_rddf.sh
-
-# Upload
-./upload_rddf.sh \
-  --env ./participant-env.json \
-  -f ./1.rddf \
-  --feu-id <YOUR_FEU_ID> \
-  --feature-id <YOUR_FEATURE_ID>
+seamosworld send-file ./m1.rddf --draw-path
 ```
 
-Example of successful output:
+| Option | Meaning |
+|--------|---------|
+| `-f`, `--feature <id>` | Target feature id. Omitted, it goes to the running feature |
+| `-n`, `--name <name>` | Filename the app sees. Omitted, the file's own name |
+| `--draw-path` | Also draw the route as a green guidance line in the simulator |
 
+To name the feature explicitly:
+
+```bash
+seamosworld send-file ./m1.rddf --feature NVX_FE_MOP_REF --draw-path
 ```
-Uploaded ./1.rddf (HTTP 200).
-```
 
-#### Parameter format
+With `--draw-path` you can eyeball the route before driving it. Anything that runs outside the
+field or a lane that came out misaligned is usually visible right here.
 
-```
-FEU_ID example      : abcdefgh-abcd-abcd-1234-abcd1234abcd
-FEATURE_ID example  : 10234dev
-```
+![The simulator with an RDDF route drawn](docs/images/sim-rddf-path.png)
 
-#### Common errors
+- **Green ribbon** — the RDDF you just sent. The white arrows are the direction of travel
+- **Red outline** — the `workArea` boundary, the scored region (§4.5)
+- `CONTROLS` at the top left selects the map and tractor. Time acceleration (1x–6x) is there too
+- The bottom panel shows speed, gear, implement and hitch state
 
-| Symptom | Cause / Fix |
-|---------|-------------|
-| `jq is required` | `sudo apt install jq` or `brew install jq` |
-| `Status: 401` | FEU_ID / FEATURE_ID typo or expired — contact organizers |
-| `Status: 4xx` (file rejected) | RDDF format error — re-check §5.4 checklist |
-| `Status: 5xx` | Temporary server issue — retry after a moment; if it persists contact organizers |
+### 6.2 Drag and drop
 
-### 6.2 Post-upload Verification
+Drag the `.rddf` file straight onto the simulator window. Handy for checking a single file.
+Drop it anywhere on the view and the route draws immediately, exactly as above.
 
-After uploading, the app receives the RDDF via `CloudDownloadListener` and parses it with `RddfParser`. Verify in the simulator that the tractor follows the intended route.
+### 6.3 Verifying it landed
+
+The app parses the file with `RddfParser` and runs the automatic validation from §4.4.
+
+- If validation rejects it, an **"RDDF Validation Error" dialog** appears immediately with the
+  reason verbatim. Fix it and send again.
+- No dialog means it passed. Check in the simulator that the tractor follows the route you meant.
+- Motion authority is granted only once the live vehicle pose matches waypoint 0 — the map spawn
+  coordinates are in the §4.5 table.
+
+### 6.4 Driving and recording (REC)
+
+Once the route draws correctly, drive it for real.
+
+1. Pick the **map** and **tractor** in `CONTROLS`. Minimum turning radius differs by size class,
+   so pick the same tractor you designed the RDDF for
+   ([tractor-specs.md](docs/hackathon-2026/tractor-specs.md)).
+2. Attach the **implement**. Do not change it mid-run — that invalidates the record (§7.3).
+3. **Turn REC on** and start driving.
+4. When the run ends, stop REC and download the record. The submission file is the sealed
+   **`.csv.enc`**; the plain CSV you also get is for your own analysis (§7.5).
+
+**Do not touch the keyboard while REC is running.** Grabbing the steering or nudging the throttle
+or brake even once invalidates the entire run (§7.3).
+
+Here is what the screen looks like mid-run.
+
+![The screen showing tillage coverage](docs/images/sim-coverage.png)
+
+- **Translucent red area** — the `workArea`. Only what is inside this counts
+- **Green strip** — ground past the completion threshold (tillage ratio 0.999)
+- **Yellow strip** — passed over but not yet deep enough to count as complete. Lower the hitch
+- The `IMPLEMENT` and `HITCH` readouts drive the actual working depth
+  ([implement-specs.md](docs/hackathon-2026/implement-specs.md))
 
 ---
 
@@ -635,7 +709,7 @@ lowers `cov` and raises `dup` and `ret` — so it hurts a great deal **indirectl
 ```
 [1] Clone repo & IDE Import & confirm build passes
         ↓
-[2] Upload rddf/1.rddf sample and observe tractor behavior in the simulator
+[2] Send one simple straight RDDF and observe tractor behaviour in the simulator
         ↓
 [3] Algorithm design — decide lane width, headland handling, turn pattern
         ↓
@@ -643,7 +717,7 @@ lowers `cov` and raises `dup` and `ret` — so it hurts a great deal **indirectl
         ↓
 [5] Validate generated RDDF against §5.4 checklist
         ↓
-   ┌─→ [6] Upload to cloud via upload_rddf.sh
+   ┌─→ [6] Apply to the app with seamosworld send-file (--draw-path to check the route)
    │        ↓
    │   [7] Turn on REC in the emulator and drive → check elapsed time / plowed area
    │        (no keyboard input while recording — one touch invalidates the run)
@@ -677,7 +751,7 @@ Questions are grouped by topic. `(§N)` at the end of each answer refers to the 
 
 > **Q1.** Do you submit a single RDDF file, or one per map?
 
-**Upload one per map.** The competition uses three maps, M1, M2 and M3; upload the RDDF file for each map separately (specified per file, e.g. `upload_rddf.sh -f ./1.rddf` — there is no mapId parameter). Per-map scores are summed using the **team name** as the key. (§4.5, §7.5)
+**Upload one per map.** The competition uses three maps, M1, M2 and M3; author an RDDF per map and drive each separately (sent per file, e.g. `seamosworld send-file ./m1.rddf` — there is no mapId parameter). Per-map scores are summed using the **team name** as the key. (§4.5, §7.5)
 
 ---
 
