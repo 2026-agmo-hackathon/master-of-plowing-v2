@@ -6,7 +6,15 @@ C++ SDK, feature model/generated sources, participant RDDF inputs, the canonical
 UI runtime in `customui-src/`, and the guides. It excludes workflow evidence and
 machine-local state (`artifacts/`, `provenance/`, `references/`, `.agmo/`,
 `.serena/`), internal tooling (`tools/`), caches, dependency and build trees,
-logs, validation routes/scripts, and the packaged `master_of_plow_app/ui` output.
+logs, and validation routes/scripts.
+
+`master_of_plow_app/ui/` is the one build output that stays in the deliverable.
+The SeamOS IDE's FIF build regenerates it — `buildReactCustomUiIfNeeded` runs
+`npm ci` and `vite build` at the start of the package stage and throws if
+`index.html` is not produced — but `build-fif.sh` and the `nvx-fif-gen`
+container copy the app directory verbatim and never invoke npm, so without the
+committed output that path produces a FIF with an empty `static/`. The checker
+enforces its presence and that `index.html` resolves every asset it names.
 
 The dashboard unit tests under `customui-src/src/dashboard/` are part of the
 deliverable — participants run them with `npm run test` — but they are excluded

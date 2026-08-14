@@ -43,15 +43,22 @@ validation path.
 | `rddf/` | Your RDDF inputs, plus the upload helper and format docs |
 | `docs/` | Run orchestration, FIF validation, and local-dev notes |
 
-`master_of_plow_app/ui/` is **not** committed. It is entirely build output of
-`customui-src/`. The IDE regenerates it during the FIF build. To produce it by
-hand:
+`master_of_plow_app/ui/` is the dashboard build output, and it **is** committed
+so that a fresh clone packages a working FIF immediately — including with
+`build-fif.sh` / `nvx-fif-gen`, which copy the app directory as-is and never run
+npm. (The IDE's own FIF build regenerates it before packaging either way.)
+
+Rebuild it whenever you change the dashboard, and commit the result together
+with your source change:
 
 ```bash
 cd customui-src
 npm ci
 npx vite build --outDir ../master_of_plow_app/ui --emptyOutDir
 ```
+
+If you forget, your FIF ships the previous dashboard — the C++ side will look
+correct while the screen does not match your code.
 
 Dashboard unit tests, from `customui-src/`:
 

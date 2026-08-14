@@ -83,3 +83,12 @@ IDT_OFFLINE_DATA/
 !*_CPP_SDK/dependencies/
 !*_CPP_SDK/dependencies/**
 # END seamos-ide generated project
+
+# The React CustomUI deploy output above is re-included on purpose. The IDE's
+# FIF build regenerates it (npm ci + vite build at the start of the package
+# stage), but build-fif.sh and the nvx-fif-gen container copy the app
+# directory as-is and never run npm — without it they package a FIF whose
+# static/ is empty. Rebuild with:
+#   cd customui-src && npx vite build --outDir ../master_of_plow_app/ui --emptyOutDir
+!master_of_plow_app/ui/
+!master_of_plow_app/ui/**
