@@ -1,0 +1,6 @@
+#Fri Aug 07 2026 15:16:49 GMT+0900 (Korean Standard Time)
+CPP_APP_PATH="cmake|master_of_plow_app"
+CPP_SDK_PATH="cmake|master_of_plow_CPP_SDK"
+ecoreVersion="8.4.18"
+projectName="master_of_plow"
+version="8.6.0"

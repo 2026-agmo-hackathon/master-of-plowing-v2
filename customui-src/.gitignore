@@ -1,0 +1,7 @@
+/node_modules/
+/dist/
+/.env
+/test-results/
+/playwright-report/
+/tests/visual/__diffs__/
+/scripts/dev-ws-server.py

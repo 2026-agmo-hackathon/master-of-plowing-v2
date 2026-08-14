@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<FeatureProviders>
+  <CAN_AGMO_Customized_Tractor/>
+  <CAN_AGMO_MTLT305/>
+  <CAN_AGMO_SteerMotor/>
+  <ISOPGN/>
+  <Serial_Ext_GPS_NMEA0183/>
+</FeatureProviders>

@@ -1,0 +1,291 @@
+{"interfaces": [
+  {
+    "Device Element": "CAN_AGMO_Customized_Tractor",
+    "Description": "AGMO - Customized Tractor - Receive_ACC_INFO",
+    "Update Rate": "Adhoc",
+    "Device Class": "CAN_AGMO_Customized_Tractor",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x490",
+    "Access": "Read",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9455",
+    "Name": "Receive_ACC_INFO"
+  },
+  {
+    "Device Element": "CAN_AGMO_Customized_Tractor",
+    "Description": "AGMO - Customized Tractor - Receive_FNR_INFO",
+    "Update Rate": "Adhoc",
+    "Device Class": "CAN_AGMO_Customized_Tractor",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x410",
+    "Access": "Read",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9456",
+    "Name": "Receive_FNR_INFO"
+  },
+  {
+    "Device Element": "CAN_AGMO_Customized_Tractor",
+    "Description": "AGMO - Customized Tractor - Receive_HYD_INFO",
+    "Update Rate": "Adhoc",
+    "Device Class": "CAN_AGMO_Customized_Tractor",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x480",
+    "Access": "Read",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9457",
+    "Name": "Receive_HYD_INFO"
+  },
+  {
+    "Device Element": "CAN_AGMO_Customized_Tractor",
+    "Description": "AGMO - Customized Tractor - Receive_SFT_INFO",
+    "Update Rate": "Adhoc",
+    "Device Class": "CAN_AGMO_Customized_Tractor",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x420",
+    "Access": "Read",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9459",
+    "Name": "Receive_SFT_INFO"
+  },
+  {
+    "Device Element": "CAN_AGMO_Customized_Tractor",
+    "Description": "AGMO - Customized Tractor - Send_ACC_CMD",
+    "Update Rate": "Process",
+    "Device Class": "CAN_AGMO_Customized_Tractor",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x540",
+    "Access": "Write",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9460",
+    "Name": "Send_ACC_CMD"
+  },
+  {
+    "Device Element": "CAN_AGMO_Customized_Tractor",
+    "Description": "AGMO - Customized Tractor -  Send_FNR_CMD",
+    "Update Rate": "Process",
+    "Device Class": "CAN_AGMO_Customized_Tractor",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x500",
+    "Access": "Write",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9461",
+    "Name": "Send_FNR_CMD"
+  },
+  {
+    "Device Element": "CAN_AGMO_Customized_Tractor",
+    "Description": "AGMO - Customized Tractor - Send_HYD_CMD",
+    "Update Rate": "Process",
+    "Device Class": "CAN_AGMO_Customized_Tractor",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x530",
+    "Access": "Write",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9462",
+    "Name": "Send_HYD_CMD"
+  },
+  {
+    "Device Element": "CAN_AGMO_Customized_Tractor",
+    "Description": "AGMO - Customized Tractor - Send_SFT_CMD",
+    "Update Rate": "Process",
+    "Device Class": "CAN_AGMO_Customized_Tractor",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x510",
+    "Access": "Write",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9464",
+    "Name": "Send_SFT_CMD"
+  },
+  {
+    "Device Element": "CAN_AGMO_MTLT305",
+    "Description": "AGMO MTLT305 Aceinna_Accel",
+    "Update Rate": "Adhoc/Cyclic",
+    "Device Class": "CAN_AGMO_MTLT305",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0xF02D",
+    "Access": "Read",
+    "Standard": "PGN",
+    "Machine Variant": "",
+    "ID": "9440",
+    "Name": "Aceinna_Accel"
+  },
+  {
+    "Device Element": "CAN_AGMO_MTLT305",
+    "Description": "AGMO MTLT305 Aceinna_AngleRate",
+    "Update Rate": "Adhoc/Cyclic",
+    "Device Class": "CAN_AGMO_MTLT305",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0xF02A",
+    "Access": "Read",
+    "Standard": "PGN",
+    "Machine Variant": "",
+    "ID": "9441",
+    "Name": "Aceinna_AngleRate"
+  },
+  {
+    "Device Element": "CAN_AGMO_MTLT305",
+    "Description": "AGMO MTLT305 Aceinna_Angles",
+    "Update Rate": "Adhoc/Cyclic",
+    "Device Class": "CAN_AGMO_MTLT305",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0xF029",
+    "Access": "Read",
+    "Standard": "PGN",
+    "Machine Variant": "",
+    "ID": "9442",
+    "Name": "Aceinna_Angles"
+  },
+  {
+    "Device Element": "CAN_AGMO_SteerMotor",
+    "Description": "AGMO - Steer Motor - Motor Heartbeat",
+    "Update Rate": "Adhoc/Cyclic",
+    "Device Class": "CAN_AGMO_SteerMotor",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x7000001",
+    "Access": "Read",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9428",
+    "Name": "Motor_Heartbeat"
+  },
+  {
+    "Device Element": "CAN_AGMO_SteerMotor",
+    "Description": "AGMO - Steer Motor - Motor Request",
+    "Update Rate": "Process",
+    "Device Class": "CAN_AGMO_SteerMotor",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x6000001",
+    "Access": "Write",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9436",
+    "Name": "Motor_Request"
+  },
+  {
+    "Device Element": "CAN_AGMO_SteerMotor",
+    "Description": "AGMO - Response Multiplexer 0x1210360",
+    "Update Rate": "Adhoc",
+    "Device Class": "CAN_AGMO_SteerMotor",
+    "Parameters": {
+      "Unit": "rpm",
+      "Datatype": "INT"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x5800001",
+    "Access": "Read",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9434",
+    "Name": "Motor_Response_Encoder_Speed"
+  },
+  {
+    "Device Element": "CAN_AGMO_SteerMotor",
+    "Description": "AGMO - Response Multiplexer 0x1210460",
+    "Update Rate": "Adhoc",
+    "Device Class": "CAN_AGMO_SteerMotor",
+    "Parameters": {
+      "Unit": "deg",
+      "Datatype": "FLOAT"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0x5800001",
+    "Access": "Read",
+    "Standard": "CAN",
+    "Machine Variant": "",
+    "ID": "9435",
+    "Name": "Motor_Response_EncoderCountValue"
+  },
+  {
+    "Device Element": "ISOPGN",
+    "Description": "Hitch Position in Percent (SPN 1873 cp. A.19.2). Resolution: 0.4%/bit, 0 offset",
+    "Update Rate": "Adhoc/Cyclic",
+    "Device Class": "ISOPGN",
+    "Parameters": {
+      "Unit": "%",
+      "Datatype": "FLOAT"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "0xFE45",
+    "Access": "Read",
+    "Standard": "PGN",
+    "Machine Variant": "",
+    "ID": "251",
+    "Name": "HitchPosPerRe"
+  },
+  {
+    "Device Element": "Serial_Ext_GPS_NMEA0183",
+    "Description": "NMEA0183 GPS data",
+    "Update Rate": "Adhoc/Cyclic",
+    "Device Class": "Serial_Ext_GPS_NMEA0183",
+    "Parameters": {
+      "Unit": "-",
+      "Datatype": "array"
+    },
+    "Version": "0.0.1",
+    "Standard DDI": "-",
+    "Access": "Read",
+    "Standard": "NEVONEX",
+    "Machine Variant": "",
+    "ID": "9465",
+    "Name": "Serial_Ext_GPS_NMEA0183_Data"
+  }
+]}

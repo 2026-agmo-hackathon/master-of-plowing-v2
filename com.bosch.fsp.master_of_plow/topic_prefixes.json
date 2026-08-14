@@ -1,0 +1,6 @@
+{
+	"topic_prefixes": {
+		"FCAL2FIL_Publish": "fek",
+		"FCAL2FIL_Subscribe": "fek"
+	}
+}

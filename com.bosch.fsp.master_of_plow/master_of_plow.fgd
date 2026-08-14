@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="ASCII"?>
+<fcal:Model xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:fcal="www.bosch.com/fcal" featureName="master_of_plow" featureVersion="1.1.51" featureAutoRun="false" featureUIType="CustomUI" featurePort="1456" featurePlatformServices="Download,Upload Data,Upload File" featureResFolderType="M">
+  <providers fname="CAN_AGMO_Customized_Tractor provider">
+    <features fname="CAN_AGMO_Customized_Tractor" machineID="7585">
+      <attributes attributeControl="Subscribe" attributeName="Receive_ACC_INFO" attributeID="9455" attributeDesc="AGMO - Customized Tractor - Receive_ACC_INFO" attributeStandard="CAN" attributeStandardID="0x490" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Adhoc" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc" attributeDeviceElement="CAN_AGMO_Customized_Tractor" attributeDeviceClass="CAN_AGMO_Customized_Tractor" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.0"/>
+      </attributes>
+      <attributes attributeControl="Subscribe" attributeName="Receive_FNR_INFO" attributeID="9456" attributeDesc="AGMO - Customized Tractor - Receive_FNR_INFO" attributeStandard="CAN" attributeStandardID="0x410" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Adhoc" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc" attributeDeviceElement="CAN_AGMO_Customized_Tractor" attributeDeviceClass="CAN_AGMO_Customized_Tractor" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.1"/>
+      </attributes>
+      <attributes attributeControl="Subscribe" attributeName="Receive_HYD_INFO" attributeID="9457" attributeDesc="AGMO - Customized Tractor - Receive_HYD_INFO" attributeStandard="CAN" attributeStandardID="0x480" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Adhoc" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc" attributeDeviceElement="CAN_AGMO_Customized_Tractor" attributeDeviceClass="CAN_AGMO_Customized_Tractor" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.2"/>
+      </attributes>
+      <attributes attributeControl="Subscribe" attributeName="Receive_SFT_INFO" attributeID="9459" attributeDesc="AGMO - Customized Tractor - Receive_SFT_INFO" attributeStandard="CAN" attributeStandardID="0x420" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Adhoc" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc" attributeDeviceElement="CAN_AGMO_Customized_Tractor" attributeDeviceClass="CAN_AGMO_Customized_Tractor" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.3"/>
+      </attributes>
+      <attributes attributeControl="Publish" attributeName="Send_ACC_CMD" attributeID="9460" attributeDesc="AGMO - Customized Tractor - Send_ACC_CMD" attributeStandard="CAN" attributeStandardID="0x540" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Process" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Process" attributeDeviceElement="CAN_AGMO_Customized_Tractor" attributeDeviceClass="CAN_AGMO_Customized_Tractor" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.4"/>
+      </attributes>
+      <attributes attributeControl="Publish" attributeName="Send_FNR_CMD" attributeID="9461" attributeDesc="AGMO - Customized Tractor -  Send_FNR_CMD" attributeStandard="CAN" attributeStandardID="0x500" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Process" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Process" attributeDeviceElement="CAN_AGMO_Customized_Tractor" attributeDeviceClass="CAN_AGMO_Customized_Tractor" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.4"/>
+      </attributes>
+      <attributes attributeControl="Publish" attributeName="Send_HYD_CMD" attributeID="9462" attributeDesc="AGMO - Customized Tractor - Send_HYD_CMD" attributeStandard="CAN" attributeStandardID="0x530" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Process" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Process" attributeDeviceElement="CAN_AGMO_Customized_Tractor" attributeDeviceClass="CAN_AGMO_Customized_Tractor" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.4"/>
+      </attributes>
+      <attributes attributeControl="Publish" attributeName="Send_SFT_CMD" attributeID="9464" attributeDesc="AGMO - Customized Tractor - Send_SFT_CMD" attributeStandard="CAN" attributeStandardID="0x510" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Process" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Process" attributeDeviceElement="CAN_AGMO_Customized_Tractor" attributeDeviceClass="CAN_AGMO_Customized_Tractor" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.4"/>
+      </attributes>
+    </features>
+  </providers>
+  <providers fname="CAN_AGMO_MTLT305 provider">
+    <features fname="CAN_AGMO_MTLT305" machineID="7584">
+      <attributes attributeControl="Subscribe" attributeName="Aceinna_Accel" attributeID="9440" attributeDesc="AGMO MTLT305 Aceinna_Accel" attributeStandard="PGN" attributeStandardID="0xF02D" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Cyclic" attributeCyclicUnit="10ms" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc/Cyclic" attributeDeviceElement="CAN_AGMO_MTLT305" attributeDeviceClass="CAN_AGMO_MTLT305" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.5"/>
+        <cycleValues>10ms</cycleValues>
+        <cycleValues>20ms</cycleValues>
+        <cycleValues>100ms</cycleValues>
+        <cycleValues>200ms</cycleValues>
+        <cycleValues>1000ms</cycleValues>
+        <cycleValues>2000ms</cycleValues>
+        <cycleValues>10000ms</cycleValues>
+        <cycleValues>30000ms</cycleValues>
+        <cycleValues>60000ms</cycleValues>
+        <cycleValues>300000ms</cycleValues>
+        <cycleValues>600000ms</cycleValues>
+        <cycleValues>5000ms</cycleValues>
+      </attributes>
+      <attributes attributeControl="Subscribe" attributeName="Aceinna_AngleRate" attributeID="9441" attributeDesc="AGMO MTLT305 Aceinna_AngleRate" attributeStandard="PGN" attributeStandardID="0xF02A" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Cyclic" attributeCyclicUnit="100ms" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc/Cyclic" attributeDeviceElement="CAN_AGMO_MTLT305" attributeDeviceClass="CAN_AGMO_MTLT305" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.6"/>
+        <cycleValues>100ms</cycleValues>
+        <cycleValues>200ms</cycleValues>
+        <cycleValues>1000ms</cycleValues>
+        <cycleValues>2000ms</cycleValues>
+        <cycleValues>10000ms</cycleValues>
+        <cycleValues>30000ms</cycleValues>
+        <cycleValues>60000ms</cycleValues>
+        <cycleValues>300000ms</cycleValues>
+        <cycleValues>600000ms</cycleValues>
+        <cycleValues>5000ms</cycleValues>
+      </attributes>
+      <attributes attributeControl="Subscribe" attributeName="Aceinna_Angles" attributeID="9442" attributeDesc="AGMO MTLT305 Aceinna_Angles" attributeStandard="PGN" attributeStandardID="0xF029" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Cyclic" attributeCyclicUnit="100ms" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc/Cyclic" attributeDeviceElement="CAN_AGMO_MTLT305" attributeDeviceClass="CAN_AGMO_MTLT305" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.7"/>
+        <cycleValues>100ms</cycleValues>
+        <cycleValues>200ms</cycleValues>
+        <cycleValues>1000ms</cycleValues>
+        <cycleValues>2000ms</cycleValues>
+        <cycleValues>10000ms</cycleValues>
+        <cycleValues>30000ms</cycleValues>
+        <cycleValues>60000ms</cycleValues>
+        <cycleValues>300000ms</cycleValues>
+        <cycleValues>600000ms</cycleValues>
+        <cycleValues>5000ms</cycleValues>
+      </attributes>
+    </features>
+  </providers>
+  <providers fname="CAN_AGMO_SteerMotor provider">
+    <features fname="CAN_AGMO_SteerMotor" machineID="7582">
+      <attributes attributeControl="Subscribe" attributeName="Motor_Heartbeat" attributeID="9428" attributeDesc="AGMO - Steer Motor - Motor Heartbeat" attributeStandard="CAN" attributeStandardID="0x7000001" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Cyclic" attributeCyclicUnit="100ms" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc/Cyclic" attributeDeviceElement="CAN_AGMO_SteerMotor" attributeDeviceClass="CAN_AGMO_SteerMotor" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.8"/>
+        <cycleValues>100ms</cycleValues>
+        <cycleValues>200ms</cycleValues>
+        <cycleValues>1000ms</cycleValues>
+        <cycleValues>2000ms</cycleValues>
+        <cycleValues>10000ms</cycleValues>
+        <cycleValues>30000ms</cycleValues>
+        <cycleValues>60000ms</cycleValues>
+        <cycleValues>300000ms</cycleValues>
+        <cycleValues>600000ms</cycleValues>
+        <cycleValues>5000ms</cycleValues>
+      </attributes>
+      <attributes attributeControl="Publish" attributeName="Motor_Request" attributeID="9436" attributeDesc="AGMO - Steer Motor - Motor Request" attributeStandard="CAN" attributeStandardID="0x6000001" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Process" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Process" attributeDeviceElement="CAN_AGMO_SteerMotor" attributeDeviceClass="CAN_AGMO_SteerMotor" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.9"/>
+      </attributes>
+      <attributes attributeControl="Subscribe" attributeName="Motor_Response_Encoder_Speed" attributeID="9434" attributeDesc="AGMO - Response Multiplexer 0x1210360" attributeStandard="CAN" attributeStandardID="0x5800001" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Adhoc" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc" attributeDeviceElement="CAN_AGMO_SteerMotor" attributeDeviceClass="CAN_AGMO_SteerMotor" attributeUnit="rpm" attributeDataType="INT" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:INT_TYPE"/>
+      </attributes>
+      <attributes attributeControl="Subscribe" attributeName="Motor_Response_EncoderCountValue" attributeID="9435" attributeDesc="AGMO - Response Multiplexer 0x1210460" attributeStandard="CAN" attributeStandardID="0x5800001" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Adhoc" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc" attributeDeviceElement="CAN_AGMO_SteerMotor" attributeDeviceClass="CAN_AGMO_SteerMotor" attributeUnit="deg" attributeDataType="FLOAT" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:FLOAT_TYPE"/>
+      </attributes>
+    </features>
+  </providers>
+  <providers fname="ISOPGN provider">
+    <features fname="ISOPGN" machineID="547">
+      <attributes attributeControl="Subscribe" attributeName="HitchPosPerRe" attributeID="251" attributeDesc="Hitch Position in Percent (SPN 1873 cp. A.19.2). Resolution: 0.4%/bit, 0 offset" attributeStandard="PGN" attributeStandardID="0xFE45" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Cyclic" attributeCyclicUnit="100ms" attributeState="Dynamic" attributeStage="RELEASED" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc/Cyclic" attributeDeviceElement="ISOPGN" attributeDeviceClass="ISOPGN" attributeUnit="%" attributeDataType="FLOAT" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:FLOAT_TYPE"/>
+        <cycleValues>100ms</cycleValues>
+        <cycleValues>200ms</cycleValues>
+        <cycleValues>1000ms</cycleValues>
+        <cycleValues>2000ms</cycleValues>
+        <cycleValues>10000ms</cycleValues>
+        <cycleValues>30000ms</cycleValues>
+        <cycleValues>60000ms</cycleValues>
+        <cycleValues>300000ms</cycleValues>
+        <cycleValues>600000ms</cycleValues>
+        <cycleValues>5000ms</cycleValues>
+      </attributes>
+    </features>
+  </providers>
+  <providers fname="Platform_Service provider">
+    <features fname="Platform_Service" machineID="6679">
+      <elements fname="Cloud" machineID="6680">
+        <attributes attributeName="Download" attributeDesc="Download a file/message from the cloud to the feature." attributeMode="Cyclic" attributeStage="Released" attributeApiVersion="0.0.1" attributeDeviceElement="Platform_Service->Cloud" attributeDeviceClass="Platform_Service">
+          <attributeType xsi:type="fcal:METHOD_TYPE"/>
+        </attributes>
+        <attributes attributeName="Upload Data" attributeDesc="upload data in String format to the cloud from the feature. " attributeMode="Cyclic" attributeStage="Released" attributeApiVersion="0.0.1" attributeDeviceElement="Platform_Service->Cloud" attributeDeviceClass="Platform_Service">
+          <attributeType xsi:type="fcal:METHOD_TYPE"/>
+        </attributes>
+        <attributes attributeName="Upload File" attributeDesc="upload a file to the cloud from the feature." attributeMode="Cyclic" attributeStage="Released" attributeApiVersion="0.0.1" attributeDeviceElement="Platform_Service->Cloud" attributeDeviceClass="Platform_Service">
+          <attributeType xsi:type="fcal:METHOD_TYPE"/>
+        </attributes>
+      </elements>
+    </features>
+  </providers>
+  <providers fname="Serial_Ext_GPS_NMEA0183 provider">
+    <features fname="Serial_Ext_GPS_NMEA0183" machineID="7586">
+      <attributes attributeControl="Subscribe" attributeName="Serial_Ext_GPS_NMEA0183_Data" attributeID="9465" attributeDesc="NMEA0183 GPS data" attributeStandard="NEVONEX" attributeStandardID="-" attributeArtifactUrl="" attributeMacType="" attributeFILVersion="" attributeRelVersion="" attributeCreatedby="" attributeMode="Cyclic" attributeCyclicUnit="100ms" attributeState="Dynamic" attributeStage="DEVELOPMENT" attributeApiVersion="0.0.1" attributeUpdateRate="Adhoc/Cyclic" attributeDeviceElement="Serial_Ext_GPS_NMEA0183" attributeDeviceClass="Serial_Ext_GPS_NMEA0183" attributeUnit="-" attributeDataType="array" attributeFilDependent="YES">
+        <attributeType xsi:type="fcal:ARRAY_TYPE" array="//@arrays.10"/>
+        <cycleValues>100ms</cycleValues>
+        <cycleValues>200ms</cycleValues>
+        <cycleValues>1000ms</cycleValues>
+        <cycleValues>2000ms</cycleValues>
+        <cycleValues>10000ms</cycleValues>
+        <cycleValues>30000ms</cycleValues>
+        <cycleValues>60000ms</cycleValues>
+        <cycleValues>300000ms</cycleValues>
+        <cycleValues>600000ms</cycleValues>
+        <cycleValues>5000ms</cycleValues>
+      </attributes>
+    </features>
+  </providers>
+  <arrays name="RECEIVE_ACC_INFO_T" description="Return type of Receive_ACC_INFO" accessType="READ">
+    <arrayLiterals name="TRZ_ACC_SIG1_V" unit="V" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="1" name="TRZ_ACC_SIG2_V" unit="V" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="2" name="TRZ_ACC_DIAG" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="3" name="TRZ_ACC_AUTO" unit="-" type="INT" dataType="EInt=0"/>
+  </arrays>
+  <arrays name="RECEIVE_FNR_INFO_T" description="Return type of Receive_FNR_INFO" accessType="READ">
+    <arrayLiterals name="TRZ_FNR_SIG1_V" unit="V" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="1" name="TRZ_FNR_SIG2_V" unit="V" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="2" name="TRZ_FNR_DIAG" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="3" name="TRZ_FNR_AUTO" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="4" name="TRZ_FNR_STATE" unit="-" type="INT" dataType="EInt=0"/>
+  </arrays>
+  <arrays name="RECEIVE_HYD_INFO_T" description="Return type of Receive_HYD_INFO" accessType="READ">
+    <arrayLiterals name="TRZ_HYD_SIG1_V" unit="V" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="1" name="TRZ_HYD_SIG2_V" unit="V" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="2" name="TRZ_HYD_DIAG" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="3" name="TRZ_HYD_AUTO" unit="-" type="INT" dataType="EInt=0"/>
+  </arrays>
+  <arrays name="RECEIVE_SFT_INFO_T" description="Return type of Receive_SFT_INFO" accessType="READ">
+    <arrayLiterals name="TRZ_SFT_SIG1_V" unit="V" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="1" name="TRZ_SFT_SIG2_V" unit="V" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="2" name="TRZ_SFT_DIAG" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="3" name="TRZ_SFT_AUTO" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="4" name="TRZ_SFT_STATE" unit="-" type="INT" dataType="EInt=0"/>
+  </arrays>
+  <arrays name="AGMO_GENERIC_SEND_CMD_T" description="Return type of AGMO's generic Send Command" accessType="WRITE">
+    <arrayLiterals name="AD_Generic_Cmd" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="1" name="AD_Generic_Mode_Cmd" unit="-" type="INT" dataType="EInt=0"/>
+  </arrays>
+  <arrays name="ACEINNA_ACCEL_T" description="Return type for Aceinna_Accel" accessType="READ">
+    <arrayLiterals name="AccY" unit="m/s2" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="1" name="AccX" unit="m/s2" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="2" name="AccZ" unit="m/s2" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="3" name="LateralAcc_FigureOfMerit" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="4" name="LongiAcc_FigureOfMerit" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="5" name="VerticAcc_FigureOfMerit" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="6" name="Support_Rate_Acc" unit="-" type="INT" dataType="EInt=0"/>
+  </arrays>
+  <arrays name="ACEINNA_ANGLERATE_T" description="Return type for Aceinna_AngleRate" accessType="READ">
+    <arrayLiterals name="GyroY" unit="deg/s" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="1" name="GyroX" unit="deg/s" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="2" name="GyroZ" unit="deg/s" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="3" name="GyroY_FigureOfMerit" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="4" name="GyroX_FigureOfMerit" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="5" name="GyroZ_FigureOfMerit" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="6" name="AngleRate_Latency" unit="ms" type="FLOAT" dataType="EFloat=0.0"/>
+  </arrays>
+  <arrays name="ACEINNA_ANGLES_T" description="Return type for Aceinna_Angles" accessType="READ">
+    <arrayLiterals name="Pitch" unit="deg" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="1" name="Roll" unit="deg" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="2" name="Pitch_Compensation" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="3" name="Pitch_FigureOfMerit" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="4" name="Roll_Compensation" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="5" name="Roll_FigureOfMerit" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="6" name="PitchRoll_Latency" unit="ms" type="FLOAT" dataType="EFloat=0.0"/>
+  </arrays>
+  <arrays name="MOTOR_HEARTBEAT_T" description="Return type for Motor Request" accessType="READ">
+    <arrayLiterals name="Heartbeat_ControlStatus_HallFailure" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="1" name="Heartbeat_ControlStatus_CANdisconnected" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="2" name="Heartbeat_ControlStatus_MotorStalled" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="3" name="Heartbeat_ControlStatus_Disabled" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="4" name="Heartbeat_ControlStatus_Overvoltage" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="5" name="Heartbeat_ControlStatus_HardwareProtection" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="6" name="Heartbeat_ControlStatus_E2PROM" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="7" name="Heartbeat_ControlStatus_Undervoltage" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="8" name="Heartbeat_ControlStatus_Overcurrent" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="9" name="Heartbeat_ControlStatus_ModeFailure" unit="-" type="INT" dataType="EInt=0"/>
+  </arrays>
+  <arrays name="RAW_CAN_DATA_DLC_8" description="Return type for raw CAN data with DLC = 8" accessType="WRITE">
+    <arrayLiterals name="Byte0" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="1" name="Byte1" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="2" name="Byte2" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="3" name="Byte3" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="4" name="Byte4" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="5" name="Byte5" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="6" name="Byte6" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="7" name="Byte7" unit="-" type="INT" dataType="EInt=0"/>
+  </arrays>
+  <arrays name="GPS_NMEA0183_T" description="Return type for NMEA0183 GPS data" accessType="READ">
+    <arrayLiterals name="UTC_ms" unit="ms" type="STRING" dataType="EString"/>
+    <arrayLiterals index="1" name="Latitude" unit="-" type="DOUBLE" dataType="EDouble=0.0"/>
+    <arrayLiterals index="2" name="Longitude" unit="-" type="DOUBLE" dataType="EDouble=0.0"/>
+    <arrayLiterals index="3" name="GPS_Quality_Indicator" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="4" name="No_Satellites" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="5" name="Altitude" unit="m" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="6" name="Geoidal_Separation" unit="m" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="7" name="DGPS_Age" unit="s" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="8" name="Differential_Ref_Station" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="9" name="Selection_Mode" unit="-" type="STRING" dataType="EString"/>
+    <arrayLiterals index="10" name="Fix_Type" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="11" name="PDOP" unit="-" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="12" name="HDOP" unit="-" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="13" name="VDOP" unit="-" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="14" name="Status" unit="-" type="INT" dataType="EInt=0"/>
+    <arrayLiterals index="15" name="Speed" unit="knots" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="16" name="Course" unit="-" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="17" name="Magnetic_variation" unit="-" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="18" name="FAA_Mode_Indicator" unit="-" type="STRING" dataType="EString"/>
+    <arrayLiterals index="19" name="Heading" unit="deg" type="FLOAT" dataType="EFloat=0.0"/>
+    <arrayLiterals index="20" name="HeadingTrue" unit="-" type="INT" dataType="EInt=0"/>
+  </arrays>
+  <fIdentity/>
+</fcal:Model>

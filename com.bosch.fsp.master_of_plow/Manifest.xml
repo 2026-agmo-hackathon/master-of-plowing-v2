@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Feature>
+  <Identity>
+    <Brand> </Brand>
+    <LegalEntity> </LegalEntity>
+    <Company> </Company>
+    <ProjectID> </ProjectID>
+    <Name>master_of_plow</Name>
+    <FeatureType> </FeatureType>
+    <FeatureDate> </FeatureDate>
+    <FeatureID>NVX_FE_MASTER_OF_PLOW</FeatureID>
+    <License> </License>
+    <Description> </Description>
+    <Author> </Author>
+    <Version>
+      <Major>1</Major>
+      <Minor>1</Minor>
+      <Patch>51</Patch>
+    </Version>
+  </Identity>
+  <UI>
+    <Type>CustomUI</Type>
+    <Port>1456</Port>
+    <Context>#!/app</Context>
+    <QRScanner>false</QRScanner>
+    <AndroidAppID> </AndroidAppID>
+    <IOSAppID> </IOSAppID>
+  </UI>
+  <Dependencies>
+    <Interfaces>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Receive_ACC_INFO</Name>
+        <Description>AGMO - Customized Tractor - Receive_ACC_INFO</Description>
+        <Access_Type>In</Access_Type>
+        <Id>9455</Id>
+        <OperationMode value="1">Adhoc</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Receive_FNR_INFO</Name>
+        <Description>AGMO - Customized Tractor - Receive_FNR_INFO</Description>
+        <Access_Type>In</Access_Type>
+        <Id>9456</Id>
+        <OperationMode value="1">Adhoc</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Receive_HYD_INFO</Name>
+        <Description>AGMO - Customized Tractor - Receive_HYD_INFO</Description>
+        <Access_Type>In</Access_Type>
+        <Id>9457</Id>
+        <OperationMode value="1">Adhoc</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Receive_SFT_INFO</Name>
+        <Description>AGMO - Customized Tractor - Receive_SFT_INFO</Description>
+        <Access_Type>In</Access_Type>
+        <Id>9459</Id>
+        <OperationMode value="1">Adhoc</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Send_ACC_CMD</Name>
+        <Description>AGMO - Customized Tractor - Send_ACC_CMD</Description>
+        <Access_Type>Out</Access_Type>
+        <Id>9460</Id>
+        <OperationMode value="1">Process</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Send_FNR_CMD</Name>
+        <Description>AGMO - Customized Tractor -  Send_FNR_CMD</Description>
+        <Access_Type>Out</Access_Type>
+        <Id>9461</Id>
+        <OperationMode value="1">Process</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Send_HYD_CMD</Name>
+        <Description>AGMO - Customized Tractor - Send_HYD_CMD</Description>
+        <Access_Type>Out</Access_Type>
+        <Id>9462</Id>
+        <OperationMode value="1">Process</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Send_SFT_CMD</Name>
+        <Description>AGMO - Customized Tractor - Send_SFT_CMD</Description>
+        <Access_Type>Out</Access_Type>
+        <Id>9464</Id>
+        <OperationMode value="1">Process</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Aceinna_Accel</Name>
+        <Description>AGMO MTLT305 Aceinna_Accel</Description>
+        <Access_Type>In</Access_Type>
+        <Id>9440</Id>
+        <OperationMode value="1">Cyclic</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Aceinna_AngleRate</Name>
+        <Description>AGMO MTLT305 Aceinna_AngleRate</Description>
+        <Access_Type>In</Access_Type>
+        <Id>9441</Id>
+        <OperationMode value="10">Cyclic</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Aceinna_Angles</Name>
+        <Description>AGMO MTLT305 Aceinna_Angles</Description>
+        <Access_Type>In</Access_Type>
+        <Id>9442</Id>
+        <OperationMode value="10">Cyclic</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Motor_Heartbeat</Name>
+        <Description>AGMO - Steer Motor - Motor Heartbeat</Description>
+        <Access_Type>In</Access_Type>
+        <Id>9428</Id>
+        <OperationMode value="10">Cyclic</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Motor_Request</Name>
+        <Description>AGMO - Steer Motor - Motor Request</Description>
+        <Access_Type>Out</Access_Type>
+        <Id>9436</Id>
+        <OperationMode value="1">Process</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Motor_Response_Encoder_Speed</Name>
+        <Description>AGMO - Response Multiplexer 0x1210360</Description>
+        <Access_Type>In</Access_Type>
+        <Id>9434</Id>
+        <OperationMode value="1">Adhoc</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Motor_Response_EncoderCountValue</Name>
+        <Description>AGMO - Response Multiplexer 0x1210460</Description>
+        <Access_Type>In</Access_Type>
+        <Id>9435</Id>
+        <OperationMode value="1">Adhoc</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>HitchPosPerRe</Name>
+        <Description>Hitch Position in Percent (SPN 1873 cp. A.19.2). Resolution: 0.4%/bit, 0 offset</Description>
+        <Access_Type>In</Access_Type>
+        <Id>251</Id>
+        <OperationMode value="10">Cyclic</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+      <Interface isFilDependent="true" opt="false">
+        <Name>Serial_Ext_GPS_NMEA0183_Data</Name>
+        <Description>NMEA0183 GPS data</Description>
+        <Access_Type>In</Access_Type>
+        <Id>9465</Id>
+        <OperationMode value="10">Cyclic</OperationMode>
+        <Version>0.0.1</Version>
+      </Interface>
+    </Interfaces>
+    <Libraries>
+      <Library>
+        <Name> </Name>
+        <Version> </Version>
+      </Library>
+    </Libraries>
+    <Development_Environment>
+      <FCAL_Runtime_Version>8.4.18</FCAL_Runtime_Version>
+      <FD_Version>8.6.0</FD_Version>
+      <Development_Tools>
+        <Development_Tool>
+          <Name> </Name>
+          <Version> </Version>
+          <TargetCompiler> </TargetCompiler>
+        </Development_Tool>
+      </Development_Tools>
+    </Development_Environment>
+    <External_Libraries>
+      <External_Library>
+        <Name> </Name>
+        <Version>
+          <Major> </Major>
+          <Minor> </Minor>
+          <Patch> </Patch>
+        </Version>
+      </External_Library>
+    </External_Libraries>
+  </Dependencies>
+  <ContainerCharacteristics>
+    <Name> </Name>
+    <ContainerType> </ContainerType>
+    <BasePackage> </BasePackage>
+    <EntryPoint> </EntryPoint>
+    <ExitPoint> </ExitPoint>
+    <AutoStart> </AutoStart>
+    <DataUpload_Support> </DataUpload_Support>
+    <ExternalCloud_API_Support> </ExternalCloud_API_Support>
+    <FGF_Integration_Support> </FGF_Integration_Support>
+    <Version>
+      <Major> </Major>
+      <Minor> </Minor>
+      <Patch> </Patch>
+    </Version>
+  </ContainerCharacteristics>
+  <MachineStatus>
+    <MachineState/>
+    <MachineStateError/>
+  </MachineStatus>
+  <Installation>
+    <Method>Docker</Method>
+    <AutoInstall>true</AutoInstall>
+    <Properties>
+      <HasToBeBuilt>true</HasToBeBuilt>
+      <DockerFile>Dockerfolder</DockerFile>
+      <AutoRun>false</AutoRun>
+      <ImageName> </ImageName>
+      <FileSystemIn>/app/in/</FileSystemIn>
+      <FileSystemOut>/app/out/</FileSystemOut>
+      <Mount> </Mount>
+    </Properties>
+  </Installation>
+  <Resource>
+    <Cpu> </Cpu>
+    <Memory> </Memory>
+    <Space> </Space>
+    <FolderType>M</FolderType>
+  </Resource>
+</Feature>

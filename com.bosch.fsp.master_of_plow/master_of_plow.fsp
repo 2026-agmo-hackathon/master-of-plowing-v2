@@ -1,0 +1,5 @@
+CAN_AGMO_Customized_TractorProvider=com.bosch.nevonex.can_agmo_customized_tractor.impl.CAN_AGMO_Customized_TractorProvider
+CAN_AGMO_MTLT305Provider=com.bosch.nevonex.can_agmo_mtlt305.impl.CAN_AGMO_MTLT305Provider
+CAN_AGMO_SteerMotorProvider=com.bosch.nevonex.can_agmo_steermotor.impl.CAN_AGMO_SteerMotorProvider
+ISOPGNProvider=com.bosch.nevonex.isopgn.impl.ISOPGNProvider
+Serial_Ext_GPS_NMEA0183Provider=com.bosch.nevonex.serial_ext_gps_nmea0183.impl.Serial_Ext_GPS_NMEA0183Provider

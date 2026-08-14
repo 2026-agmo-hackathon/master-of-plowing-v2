@@ -1,0 +1,11 @@
+prefix=/var/jenkins_home/workspace/AL_CPP_Linux-Binary-Build_custom/Dependencies/INSTALL
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include 
+
+Name: OpenSSL-libssl
+Description: Secure Sockets Layer and cryptography libraries
+Version: 3.3.2
+Requires.private: libcrypto
+Libs: -L${libdir} -lssl
+Cflags: -I${includedir}

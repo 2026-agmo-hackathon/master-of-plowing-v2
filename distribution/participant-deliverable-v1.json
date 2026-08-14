@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "name": "master-of-plow-participant-source",
+  "layout": "v2",
+  "layoutNotes": [
+    "The CustomUI source moved from ui/ to customui-src/. That is the path the",
+    "SeamOS IDE resolves with no configuration, so a clone builds without a",
+    "local .seamos-workspace.json or .seamos-context.json (both are machine-",
+    "local and intentionally gitignored).",
+    "master_of_plow_CPP_SDK/ is committed because the C++ build resolves it via",
+    "FIND_PACKAGE and a clone opened on another machine has no other source for",
+    "it.",
+    "master_of_plow_app/ui/ is not committed: it is entirely build output of",
+    "customui-src/ (public/ assets plus the Vite bundle)."
+  ],
+  "includePaths": [
+    ".gitignore",
+    "README.md",
+    "HACKATHON_GUIDE.md",
+    "HACKATHON_GUIDE.en.md",
+    "HACKATHON_GUIDE.de.md",
+    "HACKATHON_GUIDE.th.md",
+    "com.bosch.fsp.master_of_plow",
+    "com.bosch.fsp.master_of_plow.gen",
+    "com.bosch.fsp.master_of_plow.gen.tests",
+    "master_of_plow_app",
+    "master_of_plow_CPP_SDK",
+    "customui-src",
+    "rddf",
+    "references",
+    "seamos-assets",
+    "docs/official-fif-validation-workflow.md",
+    "docs/distribution-and-local-dev.md",
+    "docs/run-orchestration.md",
+    "distribution/participant-deliverable-v1.json"
+  ],
+  "excludeRoots": [
+    ".agmo",
+    ".serena",
+    "artifacts",
+    "provenance",
+    ".git",
+    "tools"
+  ],
+  "excludeGlobs": [
+    "**/.DS_Store",
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/*.log",
+    "**/build/**",
+    "**/dist/**",
+    "**/node_modules/**",
+    "customui-src/src/**/__tests__/**",
+    "customui-src/build.log",
+    "customui-src/test-results/**",
+    "customui-src/tests/visual/__diffs__/**",
+    "master_of_plow_app/ui/**",
+    "**/*headless*",
+    "**/*r10-validation*",
+    "**/*hl24-corrected*",
+    "**/*straight-validation*",
+    "**/SimcanClient.ts",
+    "**/monitor_*validation_run.mjs"
+  ],
+  "requiredAbsent": [
+    "customui-src/build.log",
+    "customui-src/dist",
+    "customui-src/public/get_assigned_ports",
+    "customui-src/src/EntryRoute.ts",
+    "customui-src/src/simulation/HeadlessValidationRoute.ts",
+    "customui-src/src/simulation/SimcanClient.ts",
+    "master_of_plow_app/ui",
+    "rddf/generate_r10_validation.py",
+    "rddf/generate_validation_routes.py"
+  ],
+  "uiRuntime": {
+    "path": "customui-src",
+    "canonicalSource": "workspace v1.1.51 backend-orchestrated dashboard",
+    "sha256": "d73bb15f328be43aee3f721209bcd55cfaaef17935cfdb105e2b864d9eba3367",
+    "excludeGlobs": [
+      "node_modules/**",
+      "dist/**",
+      "src/**/__tests__/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "build.log",
+      "test-results/**",
+      "tests/visual/__diffs__/**",
+      ".DS_Store"
+    ]
+  }
+}

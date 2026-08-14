@@ -1,0 +1,11 @@
+prefix=/var/jenkins_home/workspace/AL_CPP_Linux-Binary-Build_custom/Dependencies/INSTALL
+exec_prefix=/var/jenkins_home/workspace/AL_CPP_Linux-Binary-Build_custom/Dependencies/INSTALL
+bindir=/var/jenkins_home/workspace/AL_CPP_Linux-Binary-Build_custom/Dependencies/INSTALL/bin
+libdir=/var/jenkins_home/workspace/AL_CPP_Linux-Binary-Build_custom/Dependencies/INSTALL/lib
+includedir=/var/jenkins_home/workspace/AL_CPP_Linux-Binary-Build_custom/Dependencies/INSTALL/include
+
+Name: bzip2
+Description: Lossless, block-sorting data compression
+Version: 1.1.0
+Libs: -L${libdir} -lbz2
+Cflags: -I${includedir}

@@ -1,0 +1,6 @@
+BRANCH :NVX_V8.6.0_25_06_2026
+BUILD :/banvm00154.apac.bosch.com:8080/job/FCAL_CPP_Linux-Binary-Build/job/custom/528/
+ARCHITECTURE :x86_64
+COMMIT_ID :0e742c2bb6a6aa85509d1c3315980d7e4994e964
+BUILD STARTED BY  :Luu Hoang (lul3hc)
+DURATION : 14 min

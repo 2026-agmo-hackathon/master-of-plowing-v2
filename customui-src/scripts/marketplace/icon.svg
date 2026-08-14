@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background gradient: bold agricultural green, top-to-bottom -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1ED186"/>
+      <stop offset="100%" stop-color="#0E8F4F"/>
+    </linearGradient>
+    <!-- Clip to rounded square -->
+    <clipPath id="roundedSquare">
+      <rect x="0" y="0" width="512" height="512" rx="96" ry="96"/>
+    </clipPath>
+  </defs>
+
+  <!-- === BACKGROUND: rounded square, corner-radius 96px (iOS ~18%) === -->
+  <rect x="0" y="0" width="512" height="512" rx="96" ry="96" fill="url(#bgGrad)"/>
+
+  <!-- === PLOW GLYPH — white, centered, no tractor === -->
+  <!-- Safe area: 10% padding = 51px inset each side (working area 51..461) -->
+
+  <g clip-path="url(#roundedSquare)">
+
+    <!-- ── BEAM / FRAME ── -->
+    <!-- Angled mounting beam: thick bar from upper-left to center, ~35° tilt -->
+    <!-- Beam runs from approx (118, 155) down-right to (265, 255) -->
+    <line
+      x1="118" y1="148"
+      x2="272" y2="262"
+      stroke="#FFFFFF"
+      stroke-width="32"
+      stroke-linecap="round"/>
+
+    <!-- ── MOLDBOARD BLADE — solid white silhouette ── -->
+    <!--
+      Side/3-quarter view of a plowshare:
+      - Pointed leading edge (left/lower-left)
+      - Curved moldboard sweeping up-right
+      - Viewed at ~30° angle
+      Center of blade mass roughly at (270, 230)
+    -->
+    <path d="
+      M 148 298
+      L 148 298
+      Q 155 260 185 230
+      Q 210 205 248 192
+      L 390 158
+      Q 410 154 418 166
+      Q 424 178 414 192
+      L 282 238
+      Q 310 248 318 272
+      Q 324 294 308 314
+      Q 288 336 252 330
+      Q 212 324 180 312
+      Q 158 306 148 298
+      Z
+    " fill="#FFFFFF"/>
+
+    <!-- Sharp leading-tip accent: triangular point at left end -->
+    <polygon
+      points="148,298 122,290 148,268"
+      fill="#FFFFFF"/>
+
+    <!-- ── FURROW LINES — 4 curved stroked arcs below the blade ── -->
+    <!-- Each arc represents a wave of freshly turned soil, curving slightly -->
+
+    <!-- Furrow 1 (topmost, closest to blade) -->
+    <path d="M 88 352 Q 200 338 320 346 Q 390 350 440 340"
+      fill="none" stroke="#FFFFFF" stroke-width="14"
+      stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Furrow 2 -->
+    <path d="M 80 384 Q 198 370 322 378 Q 392 382 445 370"
+      fill="none" stroke="#FFFFFF" stroke-width="14"
+      stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Furrow 3 -->
+    <path d="M 72 416 Q 196 402 324 410 Q 395 415 448 402"
+      fill="none" stroke="#FFFFFF" stroke-width="14"
+      stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Furrow 4 (bottommost) -->
+    <path d="M 66 448 Q 194 434 326 442 Q 398 447 452 434"
+      fill="none" stroke="#FFFFFF" stroke-width="14"
+      stroke-linecap="round" stroke-linejoin="round"/>
+
+  </g>
+
+</svg>

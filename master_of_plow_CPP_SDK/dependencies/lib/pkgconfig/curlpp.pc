@@ -1,0 +1,13 @@
+# This is a comment
+prefix=/var/jenkins_home/workspace/AL_CPP_Linux-Binary-Build_custom/Dependencies/INSTALL
+exec_prefix=/var/jenkins_home/workspace/AL_CPP_Linux-Binary-Build_custom/Dependencies/INSTALL
+includedir=include
+
+Name: curlpp
+Description: cURLpp is a libcurl C++ wrapper
+Version: 0.8.1                           
+Libs: -Llib -lcurlpp  
+Cflags: -Iinclude 
+# libcurl is required as non-private because CurlHandle.inl uses curl_easy_setopt.
+Requires: libcurl
+ 

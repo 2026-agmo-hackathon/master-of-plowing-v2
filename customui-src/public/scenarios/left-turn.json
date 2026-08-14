@@ -1,0 +1,15 @@
+{
+  "id": "left-turn",
+  "label": "Left Turn",
+  "map": "flat",
+  "time_of_day": 12,
+  "duration_ms": 8000,
+  "steps": [
+    { "t_ms": 0,    "action": { "type": "engine",   "value": true } },
+    { "t_ms": 500,  "action": { "type": "throttle", "value": 0.5 } },
+    { "t_ms": 2000, "action": { "type": "steer",    "value": -0.6 } },
+    { "t_ms": 6000, "action": { "type": "steer",    "value": 0 } },
+    { "t_ms": 7500, "action": { "type": "throttle", "value": 0 } },
+    { "t_ms": 8000, "action": { "type": "engine",   "value": false } }
+  ]
+}

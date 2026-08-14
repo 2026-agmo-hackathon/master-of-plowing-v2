@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html ng-app="mockCloud" lang="en" dir="ltr">
+
+<head>
+    <title>Cloud mock</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Mock cloud">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./css/bootstrap.min.css" />
+</head>
+
+<body>
+    <div ui-view></div>
+    <script src="./js/plugins/jquery.min.js"></script>
+    <script src="./js/plugins/popper.min.js"></script>
+    <script src="./js/plugins/bootstrap.min.js"></script>
+    <script src="./js/plugins/angular.min.js"></script>
+    <script src="./js/plugins/angular-cookies.min.js"></script>
+    <script src="./js/plugins/angular-ui-router.min.js"></script>
+    <script src="./js/plugins/stateEvents.min.js"></script>
+    <script src="./js/plugins/ng-file-upload.min.js"></script>
+    <script src="./js/common/app.js"></script>
+    <script src="./js/common/http.js"></script>
+    <script src="./js/common/services.js"></script>
+    <script src="./js/common/routeProvider.js"></script>
+    <script src="./js/controller/DashboardController.js"></script>
+    <script src="./js/controller/MainController.js"></script>
+    <script src="./js/controller/DataDownloadController.js"></script>
+    
+    <script type="text/ng-template" id="main.html">
+        <style>
+             body {
+                font-family: "Lato", sans-serif;
+                background-image: url('./images/nevonex-key.jpg');
+                opacity:0.98;
+             }
+              #overview {
+                   background:white;
+                   font-family: sans-serif;
+                   height:92vh;
+               }
+            
+             
+           </style>
+         
+         <div id="main" class="container-fluid">
+
+            <fieldset id="overview" class=" m-4 rounded-lg p-4 overflow-auto">
+                    <div style="height:4vh">
+                        <button class="btn border border-info" 
+                        ng-class="{'btn-primary' : !vm.context.selected}" ng-click="vm.gotodashboard();" type="button">
+                         Files </button>
+                        <button ng-class="{'btn-primary' : vm.context.selected}" 
+                    ng-click="vm.pushtofeature();" class="btn border border-info" type="button">
+                    Push to FEATURE </button>
+                    <h3 class= "d-inline-block position-absolute" style="right:50%">Content Provider Emulator</h3>
+                       <img  class="float-right" style="height:4vh" src= "./images/nevonexlogo.png" alt="logo">
+                    </div>
+                <div ui-view></div>
+            </fieldset>
+        </div>
+      </script>
+    <script type="text/ng-template" id="dashboard.html">
+        <style>
+            .files-fieldset{
+                box-shadow:10px 5px 5px  2px #726DA8;
+                width:70vw;
+                
+            }
+            .files-table{
+                height:25vh;
+                
+            }
+           
+         </style>
+          <fieldset class="   border p-2 my-4 mx-auto files-fieldset">
+            <legend class="w-auto">&nbsp;  Uploaded Files &nbsp; </legend>
+            <div class="table-responsive overflow-auto text-center files-table">
+                <table class="table table-sm table-striped w-75 m-auto table-bordered table-hover" >
+                    <thead>
+                        <tr class="bg-info">
+                            <th class="col-1 " scope="col">Serial no</th>
+                            <th class="col-3" scope="col">Name</th>
+                            <th class="col-2" scope="col">Type</th>
+                            <th class="col-2" scope="col">Platform</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="x in vm.context.uploadfiles">
+                            <td class="col-1">{{$index + 1}}</td>
+                            <td> <a class="text-primary" style=" cursor: pointer;"  ng-click="vm.showfile(x.path)">{{ x.name }}</a></td> 
+                            <td>{{ x.type }}</td>
+                            <td>{{ x.platform }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </fieldset>
+        <br>
+        <fieldset class=" border p-2  mx-auto  files-fieldset">
+            <legend class="w-auto"> &nbsp; Downloaded Files &nbsp; </legend>
+            <div class="table-responsive overflow-auto text-center files-table" >
+                <table class="table table-sm table-striped w-75 m-auto table-bordered table-hover" >
+                    <thead>
+                        <tr class="bg-info">
+                            <th class="col-1" scope="col">Serial no</th>
+                            <th class="col-3" scope="col">Name</th>
+                            <th class="col-2" scope="col">Type</th>
+                            <th class="col-2" scope="col">Platform</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="x in vm.context.downloadedFiles">
+                            <td class="col-1">{{$index + 1}}</td>
+                            <td> <a class="text-primary" style=" cursor: pointer;" ng-click="vm.showfile(x.path)">{{ x.name }}</a></td> 
+                            <td>{{ x.type }}</td>
+                            <td>{{ x.platform }}</td>
+                        </tr>
+       
+                    </tbody>
+                </table>
+            </div>
+        </fieldset>
+                
+      </script>
+    <script type="text/ng-template" id="datadownload.html">
+        <style>
+            .download-fieldset{
+                box-shadow:10px 5px 5px  2px #726DA8;
+                width:70vw;
+                
+            }
+            .files-table{
+                height:25vh;
+            }
+         </style>
+        <fieldset class=" border p-2 my-4 mx-auto download-fieldset">
+            <legend class="w-auto">&nbsp;  File &nbsp;  </legend>
+            <div class="m-auto text-center  form-inline files-table">
+                <label for="form-select  "> &nbsp;Platform &nbsp;</label>
+                <select ng-model="vm.platform" ng-options=" itm for itm in vm.context.platformoptions" class=" form-control mx-sm-2 col-sm-2" id="form-select">
+                
+                </select>
+                <input type="file" name="file"  ngf-select ng-model="vm.filedata" id="file-data" class="border-success">
+                <button class="btn btn-primary"  ng-disabled = "!vm.filedata||!vm.platform" ng-click="vm.pushfiletofeature(vm.filedata,vm.platform );" type="button">Send</button>
+                <br>
+                <span class=" text-primary">{{ vm.context.uploadstatus }}</span>
+            </div>
+        </fieldset>
+        <br>
+        <fieldset class="   border p-2 mx-auto  download-fieldset">
+            <legend class="w-auto">&nbsp;  Message &nbsp; </legend>
+            <div class="m-auto text-center form-inline files-table">
+                <label for="form-select "> &nbsp;Platform &nbsp;</label>
+                <select ng-model="vm.fileplatform" ng-options=" itm for itm in vm.context.platformoptions" class=" form-control mx-sm-2 col-sm-2" id="form-select">
+                   
+                </select>
+                <textarea placeholder= "Message" class=" border-success form-control col-sm-4 mx-2" ng-model="vm.msgdata" rows="3"></textarea>
+                <button class="btn btn-primary" ng-disabled = "!vm.msgdata||!vm.fileplatform" type="button" ng-click="vm.pushmsgtofeature(vm.msgdata, vm.fileplatform);">Send</button>
+                <span class=" text-primary"> &nbsp;  {{ vm.context.msguploadstatus }}</span>            
+        </div>
+        </fieldset>
+         
+      </script>
+</body>
+
+</html>

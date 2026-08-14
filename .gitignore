@@ -1,0 +1,87 @@
+# macOS / editor noise
+.DS_Store
+*.swp
+*~
+
+# Python helper caches
+__pycache__/
+*.py[cod]
+
+# Agent and assistant local state
+.agmo/
+.serena/
+.claude/settings.local.json
+
+# Local validation output. Runs are reproducible; they are not source.
+artifacts/
+
+# Secrets — never commit these.
+*.pem
+*.key
+*.p12
+.env
+.env*.local
+
+# BEGIN seamos-ide generated project
+# Build and package artifacts
+**/build/
+**/target/
+**/bin/
+**/out/
+**/dist/
+build/fif/
+seamos-assets/builds/*.fif
+*.fif
+
+# Frontend dependency and build outputs
+node_modules/
+**/node_modules/
+customui-src/node_modules/
+customui-src/dist/
+
+# React CustomUI deploy output; source lives in customui-src/.
+master_of_plow_app/ui/
+
+# Logs, temp files, and local caches
+**/logs/
+*.log
+run*.log
+**/temp/
+.cache/
+**/.cache/
+.vite/
+**/.vite/
+
+# Local IDE/workspace state
+.metadata/
+.JETEmitters/
+.settings/
+.nevonex/
+.seamos-backup/
+.seamos/sessions/
+.mcp.json
+.seamos-context.json
+.seamos-context.json.lock*
+.seamos-context.json.bak.*
+.seamos-workspace.json
+.seamos-workspace.json.bak.*
+
+# App runtime data; disk/seed is intentional project input.
+**/db/
+**/disk/**
+!**/disk/
+!**/disk/seed/
+!**/disk/seed/**
+# references/ ships sample simulation inputs that live under a disk/ path.
+!references/**
+
+# Feature Designer local inputs and offline data
+_interface.json
+_config.prop
+IDT_OFFLINE_DATA/
+
+# C++ runtime dependencies are required when a clone is opened elsewhere.
+!*_CPP_SDK/
+!*_CPP_SDK/dependencies/
+!*_CPP_SDK/dependencies/**
+# END seamos-ide generated project

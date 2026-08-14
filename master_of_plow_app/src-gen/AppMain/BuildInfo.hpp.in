@@ -1,0 +1,10 @@
+#ifndef APPMAIN_BUILDINFO_HPP
+#define APPMAIN_BUILDINFO_HPP
+
+namespace AppMain {
+
+inline constexpr const char* BUILD_ID = "@SEAMOS_BUILD_ID@";
+
+} // namespace AppMain
+
+#endif // APPMAIN_BUILDINFO_HPP

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry including="**/*.java" kind="src" output="target/classes" path="src">
+		<attributes>
+			<attribute name="optional" value="true"/>
+			<attribute name="maven.pomderived" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8">
+		<attributes>
+			<attribute name="maven.pomderived" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
+	<classpathentry kind="lib" path="testlib/junit-4.12.jar"/>
+	<classpathentry kind="lib" path="testlib/bcpkix-jdk15on-1.70.jar"/>
+	<classpathentry kind="lib" path="testlib/bcprov-jdk15on-1.70.jar"/>
+	<classpathentry kind="lib" path="testlib/commons-codec-1.2.jar"/>
+	<classpathentry kind="lib" path="testlib/commons-httpclient-3.1.jar"/>
+	<classpathentry kind="lib" path="testlib/commons-io-2.11.0.jar"/>
+	<classpathentry kind="lib" path="testlib/commons-lang3-3.12.0.jar"/>
+	<classpathentry kind="lib" path="testlib/commons-logging-1.2.jar"/>
+	<classpathentry kind="lib" path="testlib/fcalruntime.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/com.bosch.fsp.master_of_plow.gen.tests/testlib/fcalruntime-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="testlib/gson-2.9.0.jar"/>
+	<classpathentry kind="lib" path="testlib/javax.servlet-api-3.1.0.jar"/>
+	<classpathentry kind="lib" path="testlib/jetty-client-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/jetty-http-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/jetty-io-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/jetty-security-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/jetty-server-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/jetty-servlet-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/jetty-util-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/jetty-webapp-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/jetty-xml-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/log4j-api-2.17.2.jar"/>
+	<classpathentry kind="lib" path="testlib/log4j-core-2.17.2.jar"/>
+	<classpathentry kind="lib" path="testlib/master_of_plow.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/com.bosch.fsp.master_of_plow.gen.tests/testlib/master_of_plow-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="testlib/org.eclipse.emf.common-2.25.0.jar"/>
+	<classpathentry kind="lib" path="testlib/org.eclipse.emf.ecore-2.27.0.jar"/>
+	<classpathentry kind="lib" path="testlib/org.eclipse.emf.ecore.xmi-2.16.0.jar"/>
+	<classpathentry kind="lib" path="testlib/org.eclipse.paho.client.mqttv3-1.2.5.jar"/>
+	<classpathentry kind="lib" path="testlib/slf4j-api-1.7.36.jar"/>
+	<classpathentry kind="lib" path="testlib/slf4j-simple-1.7.36.jar"/>
+	<classpathentry kind="lib" path="testlib/spark-core-2.9.3.jar"/>
+	<classpathentry kind="lib" path="testlib/websocket-api-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/websocket-client-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/websocket-common-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/websocket-server-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="testlib/websocket-servlet-9.4.40.v20210413.jar"/>
+	<classpathentry kind="lib" path="resources"/>
+	<classpathentry kind="con" path="org.eclipse.m2e.MAVEN2_CLASSPATH_CONTAINER">
+		<attributes>
+			<attribute name="maven.pomderived" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="target/generated-sources/annotations">
+		<attributes>
+			<attribute name="optional" value="true"/>
+			<attribute name="maven.pomderived" value="true"/>
+			<attribute name="ignore_optional_problems" value="true"/>
+			<attribute name="m2e-apt" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="target/test-classes" path="target/generated-test-sources/test-annotations">
+		<attributes>
+			<attribute name="optional" value="true"/>
+			<attribute name="maven.pomderived" value="true"/>
+			<attribute name="ignore_optional_problems" value="true"/>
+			<attribute name="m2e-apt" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="output" path="target/classes"/>
+</classpath>
