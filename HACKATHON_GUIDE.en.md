@@ -172,101 +172,76 @@ pose with waypoint 0. Keep the map spawn and the first waypoint aligned.
 
 ### 4.5 Map Information (Field Maps)
 
-The competition has **four maps**. M1–M3 are public; **M4 is hidden** and its signals are blocked until the organizers reveal it. Each map's polygon (field boundary) is defined in WGS84 `lat, lon` coordinates, and participants' RDDFs should cover as much of the polygon interior as possible.
+The competition uses **three maps (M1, M2, M3)**. All three share the **same GPS origin — `37.5665, 126.978`**.
 
-| Map | Name | Origin (lat, lon) | Area | Vertices | Availability |
-|-----|------|-------------------|------|----------|--------------|
-| **M1** | Open Fields | 35.8000, 126.8800 | 1,500 m² | 4 | public |
-| **M2** | Sloped Acres | 34.6800, 126.9100 | 1,948 m² | 37 | public |
-| **M3** | Patchwork Plots | 35.4200, 127.3900 | 1,355 m² | 54 | public |
-| **M4** | Crooked Bottoms | 35.2000, 127.4600 | 1,879 m² | 89 | **hidden** |
+| Map | id | Name | Map size | Drivable (driveArea) | Scored (workArea) |
+|-----|----|------|----------|----------------------|-------------------|
+| **M1** | `agri-1-plain` | Open Fields | 88 × 80 m | 3,187 m² | **1,499 m²** |
+| **M2** | `agri-2-sloped` | Sloped Acres | 80 × 80 m | 2,132 m² | **1,947 m²** |
+| **M3** | `agri-3-patch` | Patchwork Plots | 72 × 80 m | 1,575 m² | **1,356 m²** |
 
-> The M4 polygon is distributed when the organizers reveal it. Until then that map's
-> signals are blocked, so you cannot prepare an RDDF for it in advance. The four maps
-> total 6,682 m².
+Only the inside of `workArea` is scored. `driveArea` is the drivable limit; beyond it lies a
+1.4 m deep ditch — **once a wheel drops in, the tractor cannot get itself out.** All three maps
+are completely flat.
 
-> Origin is the GPS reference point corresponding to local (0, 0) of the polygon (for reference only); area is the m² value calculated using the shoelace formula.
+#### Start position — align waypoint 0 with this
 
-#### M1 · Open Fields (1,500 m², 4 vertices)
+| Map | Start (lat, lon) | Heading | World (x, z) |
+|-----|------------------|---------|--------------|
+| **M1** | `37.5663023, 126.9780595` | `32.3°` | 5.25, 21.85 |
+| **M2** | `37.5665036, 126.9783060` | `-48.1°` | 27.0, -0.4 |
+| **M3** | `37.5662952, 126.9782923` | `-17.5°` | 25.79, 22.64 |
+
+- Heading is **0° = north, clockwise** (`forward = (sin h, -cos h)`).
+- The start coordinate is the **contact point of the rear-right wheel**, not the vehicle centre.
+  Switch tractor size class and the rear-right wheel still lands exactly here.
+- Motion authority is granted only once the live vehicle pose matches waypoint 0 (§4.4).
+
+#### Converting world coordinates to lat/lon
+
+Polygons in the map document are written in world `[x, z]` metres (**+x = east / -z = north**).
+An RDDF needs lat/lon, so convert like this.
+
+```
+lat = 37.5665 - z / 110540
+lon = 126.978 + x / (111320 x cos(37.5665°))
+```
+
+> Using `111320` for latitude shifts every scoring cell by 0.7%. Latitude **must** use
+> **`110540`**. The leaderboard inverts the same formula onto 0.5 m scoring cells.
+
+#### M1 · Open Fields
 
 ![M1 Open Fields](docs/maps/map1_polygon.png)
 
-The simplest rectangular field. Ideal for quickly validating a boustrophedon algorithm.
+The simplest rectangular field — ideal for quickly validating a boustrophedon algorithm.
 
-```
-polygon = [
-  (35.8002897, 126.8806012), (35.8004622, 126.8802035),
-  (35.8001628, 126.8800000), (35.8000000, 126.8803803),
-]
-```
-
-#### M2 · Sloped Acres (1,948 m², 37 vertices)
+#### M2 · Sloped Acres
 
 ![M2 Sloped Acres](docs/maps/map2_polygon.png)
 
-A complex polygon simulating a sloped field. The headland area is long, making U-turn handling tricky.
+A complex 37-vertex polygon. Despite the name there is no slope. The long headland makes
+U-turn handling awkward.
 
-```
-polygon = [
-  (34.6805868, 126.9102540), (34.6804636, 126.9100401),
-  (34.6804514, 126.9100264), (34.6804341, 126.9100117),
-  (34.6804101, 126.9100000), (34.6803773, 126.9100074),
-  (34.6803447, 126.9100296), (34.6803099, 126.9100506),
-  (34.6802487, 126.9100895), (34.6801798, 126.9101240),
-  (34.6800194, 126.9101844), (34.6800025, 126.9101929),
-  (34.6800000, 126.9102047), (34.6800011, 126.9102220),
-  (34.6800076, 126.9102429), (34.6800240, 126.9102651),
-  (34.6800455, 126.9102861), (34.6800750, 126.9103133),
-  (34.6801236, 126.9103631), (34.6801328, 126.9103724),
-  (34.6801435, 126.9103860), (34.6801583, 126.9104057),
-  (34.6801838, 126.9104396), (34.6802037, 126.9104747),
-  (34.6802139, 126.9104994), (34.6802247, 126.9105198),
-  (34.6802354, 126.9105480), (34.6802425, 126.9105771),
-  (34.6802543, 126.9106086), (34.6802578, 126.9106314),
-  (34.6802619, 126.9106436), (34.6802696, 126.9106499),
-  (34.6802767, 126.9106461), (34.6802850, 126.9106363),
-  (34.6803441, 126.9105654), (34.6803610, 126.9105499),
-  (34.6803819, 126.9105290),
-]
-```
-
-#### M3 · Patchwork Plots (1,355 m², 54 vertices)
+#### M3 · Patchwork Plots
 
 ![M3 Patchwork Plots](docs/maps/map3_polygon.png)
 
-An irregular field with a mix of concave and convex sections. A simple boustrophedon leaves significant unplowed areas, so polygon clipping and per-sub-region processing are required.
+An irregular field mixing concave and convex edges (54 vertices). A plain boustrophedon leaves
+a lot unplowed, so you need polygon clipping and per-region handling.
 
-```
-polygon = [
-  (35.4205363, 127.3902241), (35.4205148, 127.3901085),
-  (35.4205020, 127.3900000), (35.4202816, 127.3900305),
-  (35.4202305, 127.3900267), (35.4201433, 127.3900066),
-  (35.4201374, 127.3900667), (35.4201845, 127.3900979),
-  (35.4202004, 127.3901073), (35.4202145, 127.3901207),
-  (35.4202350, 127.3901547), (35.4202510, 127.3901941),
-  (35.4202633, 127.3902458), (35.4202652, 127.3902776),
-  (35.4202611, 127.3903620), (35.4201999, 127.3903605),
-  (35.4201579, 127.3903998), (35.4201428, 127.3904155),
-  (35.4201145, 127.3904243), (35.4200712, 127.3904327),
-  (35.4200707, 127.3904499), (35.4200667, 127.3904538),
-  (35.4200640, 127.3904632), (35.4200598, 127.3904727),
-  (35.4200525, 127.3904733), (35.4200484, 127.3904905),
-  (35.4200105, 127.3904933), (35.4200014, 127.3905578),
-  (35.4200000, 127.3905707), (35.4200178, 127.3905879),
-  (35.4200319, 127.3906068), (35.4200430, 127.3906307),
-  (35.4200766, 127.3906202), (35.4201037, 127.3906140),
-  (35.4201269, 127.3906073), (35.4201511, 127.3905483),
-  (35.4201598, 127.3905333), (35.4201770, 127.3905294),
-  (35.4202127, 127.3905333), (35.4202578, 127.3905433),
-  (35.4202830, 127.3904800), (35.4202971, 127.3904454),
-  (35.4203168, 127.3904127), (35.4203341, 127.3903826),
-  (35.4203501, 127.3903605), (35.4203743, 127.3903364),
-  (35.4203994, 127.3903132), (35.4204189, 127.3902909),
-  (35.4204427, 127.3902630), (35.4204637, 127.3902486),
-  (35.4204810, 127.3902407), (35.4205012, 127.3902347),
-  (35.4205213, 127.3902308), (35.4205394, 127.3902358),
-]
-```
+#### Detailed specification documents
+
+Full polygon coordinates, surface properties and tractor specs live in separate documents.
+
+| Document | Contents |
+|----------|----------|
+| [maps.md](docs/hackathon-2026/maps.md) | Map sizes, GPS origin, **full `workArea`/`driveArea` polygon coordinates**, tillage scoring basis (0.2 m cells, 0.999 completion) |
+| [terrain.md](docs/hackathon-2026/terrain.md) | Surface friction, traction limits and tillage-resistance formulas with values |
+| [tractor-specs.md](docs/hackathon-2026/tractor-specs.md) | Physical specs of the three tractors (small · medium · large) |
+| [rddf-format.md](docs/hackathon-2026/rddf-format.md) | RDDF format specification |
+| [signal-flow.md](docs/hackathon-2026/signal-flow.md) | How your app receives sensor signals and sends commands |
+| [system-requirements.md](docs/hackathon-2026/system-requirements.md) | Participant PC requirements |
 
 ---
 
@@ -343,8 +318,8 @@ Use this as a starting point and evolve it into your own algorithm.
 
 import math
 
-# --- Field origin (bottom-left) and lat/lon conversion ---
-LAT0, LON0 = 35.8001, 126.8807
+# --- Field origin and lat/lon conversion (all three contest maps share it) ---
+LAT0, LON0 = 37.5665, 126.978
 M_PER_DEG_LAT = 110540.0
 M_PER_DEG_LON = 111320.0 * math.cos(math.radians(LAT0))
 
@@ -521,7 +496,7 @@ After uploading, the app receives the RDDF via `CloudDownloadListener` and parse
 | Item | Value |
 |------|-------|
 | Start position | The **map's spawn point**. Motion authority is granted only once waypoint 0 of your RDDF matches it (§4.4) |
-| Target fields | **M1 · M2 · M3** public; **M4** hidden — signals blocked until the organizers reveal it (§4.5) |
+| Target fields | **M1 · M2 · M3** (§4.5) |
 | Target threshold | **No hard cutoff** — a score is produced even at low coverage |
 | Maximum speed | **7 km/h** |
 | Implement | **Exactly one** per run — swapping it mid-recording invalidates the run |
@@ -587,12 +562,11 @@ rate does not shorten your record.
 
 Full-marks times per map for a large tractor (`R = 4.9`) with a large plow (`W = 3.6`):
 
-| Map | Area (m²) | `D_ideal` (m) | Full-marks time |
-|-----|-----------|---------------|-----------------|
-| M1 Open Fields | 1,500 | 570.5 | **587 s** (9m47s) |
-| M2 Sloped Acres | 1,948 | 756.5 | **778 s** (12m58s) |
-| M3 Patchwork Plots | 1,355 | 576.6 | **593 s** (9m53s) |
-| M4 Crooked Bottoms | 1,879 | 737.5 | **759 s** (12m39s) |
+| Map | Scored area (m²) | `D_ideal` (m) | Full-marks time |
+|-----|------------------|---------------|-----------------|
+| M1 Open Fields | 1,499 | 570.5 | **587 s** (9m47s) |
+| M2 Sloped Acres | 1,947 | 756.5 | **778 s** (12m58s) |
+| M3 Patchwork Plots | 1,356 | 576.6 | **593 s** (9m53s) |
 
 Changing tractor or implement changes `R` and `W`, and every one of these is recomputed.
 
@@ -703,7 +677,7 @@ Questions are grouped by topic. `(§N)` at the end of each answer refers to the 
 
 > **Q1.** Do you submit a single RDDF file, or one per map?
 
-**Upload one per map.** The competition has four maps — M1, M2, M3 public and M4 hidden; upload the RDDF file for each map separately (specified per file, e.g. `upload_rddf.sh -f ./1.rddf` — there is no mapId parameter). Per-map scores are summed using the **team name** as the key. (§4.5, §7.5)
+**Upload one per map.** The competition uses three maps, M1, M2 and M3; upload the RDDF file for each map separately (specified per file, e.g. `upload_rddf.sh -f ./1.rddf` — there is no mapId parameter). Per-map scores are summed using the **team name** as the key. (§4.5, §7.5)
 
 ---
 

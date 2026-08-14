@@ -173,101 +173,78 @@ vergleichen.
 
 ### 4.5 Karteninformationen (Field Maps)
 
-Der Wettbewerb hat **vier Karten**. M1–M3 sind öffentlich; **M4 ist hidden** und ihre Signale sind gesperrt, bis die Organisatoren sie freigeben. Das Polygon (Feldgrenze) jeder Karte ist in WGS84-Koordinaten (`lat, lon`) definiert — die RDDF der Teilnehmer soll das Innere des jeweiligen Polygons möglichst vollständig abdecken.
+Der Wettbewerb verwendet **drei Karten (M1, M2, M3)**. Alle drei teilen sich denselben
+**GPS-Ursprung — `37.5665, 126.978`**.
 
-| Karte | Name | Origin (lat, lon) | Fläche | Eckpunkte | Verfügbarkeit |
-|----|------|-------------------|------|-----------|---------------|
-| **M1** | Open Fields | 35.8000, 126.8800 | 1.500 m² | 4 | öffentlich |
-| **M2** | Sloped Acres | 34.6800, 126.9100 | 1.948 m² | 37 | öffentlich |
-| **M3** | Patchwork Plots | 35.4200, 127.3900 | 1.355 m² | 54 | öffentlich |
-| **M4** | Crooked Bottoms | 35.2000, 127.4600 | 1.879 m² | 89 | **hidden** |
+| Karte | id | Name | Kartengröße | Befahrbar (driveArea) | Gewertet (workArea) |
+|-------|----|------|-------------|-----------------------|---------------------|
+| **M1** | `agri-1-plain` | Open Fields | 88 × 80 m | 3.187 m² | **1.499 m²** |
+| **M2** | `agri-2-sloped` | Sloped Acres | 80 × 80 m | 2.132 m² | **1.947 m²** |
+| **M3** | `agri-3-patch` | Patchwork Plots | 72 × 80 m | 1.575 m² | **1.356 m²** |
 
-> Das M4-Polygon wird verteilt, sobald die Organisatoren die Karte freigeben. Bis dahin sind
-> ihre Signale gesperrt, ein RDDF lässt sich also nicht vorbereiten. Die vier Karten ergeben
-> zusammen 6.682 m².
+Gewertet wird nur das Innere von `workArea`. `driveArea` ist die Fahrgrenze; dahinter liegt ein
+1,4 m tiefer Graben — **ist ein Rad erst drin, kommt der Traktor nicht mehr allein heraus.**
+Alle drei Karten sind vollständig eben.
 
-> Origin ist der GPS-Referenzpunkt für den lokalen Ursprung (0, 0) des Polygons (zur Referenz); die Fläche ist der per Shoelace-Formel berechnete m²-Wert.
+#### Startposition — richte Waypoint 0 hierauf aus
 
-#### M1 · Open Fields (1.500 m², 4 Eckpunkte)
+| Karte | Start (lat, lon) | Heading | Welt (x, z) |
+|-------|------------------|---------|-------------|
+| **M1** | `37.5663023, 126.9780595` | `32,3°` | 5,25, 21,85 |
+| **M2** | `37.5665036, 126.9783060` | `-48,1°` | 27,0, -0,4 |
+| **M3** | `37.5662952, 126.9782923` | `-17,5°` | 25,79, 22,64 |
+
+- Heading ist **0° = Norden, im Uhrzeigersinn** (`forward = (sin h, -cos h)`).
+- Die Startkoordinate ist der **Aufstandspunkt des rechten Hinterrads**, nicht die Fahrzeugmitte.
+  Auch bei einer anderen Traktorklasse steht das rechte Hinterrad exakt hier.
+- Die Fahrfreigabe kommt erst, wenn die tatsächliche Fahrzeuglage zu Waypoint 0 passt (§4.4).
+
+#### Umrechnung Weltkoordinaten in lat/lon
+
+Die Polygone im Kartendokument stehen in Welt-`[x, z]` in Metern (**+x = Osten / -z = Norden**).
+Ein RDDF braucht lat/lon, also so umrechnen:
+
+```
+lat = 37.5665 - z / 110540
+lon = 126.978 + x / (111320 x cos(37.5665°))
+```
+
+> Mit `111320` für den Breitengrad verschieben sich alle Bewertungszellen um 0,7%. Für den
+> Breitengrad **muss** **`110540`** verwendet werden. Das Leaderboard invertiert dieselbe Formel
+> auf 0,5-m-Bewertungszellen.
+
+#### M1 · Open Fields
 
 ![M1 Open Fields](docs/maps/map1_polygon.png)
 
-Einfachstes rechteckiges Feld. Ideal, um den Boustrophedon-Algorithmus schnell zu testen.
+Das einfachste rechteckige Feld — ideal, um einen Boustrophedon-Algorithmus schnell zu prüfen.
 
-```
-polygon = [
-  (35.8002897, 126.8806012), (35.8004622, 126.8802035),
-  (35.8001628, 126.8800000), (35.8000000, 126.8803803),
-]
-```
-
-#### M2 · Sloped Acres (1.948 m², 37 Eckpunkte)
+#### M2 · Sloped Acres
 
 ![M2 Sloped Acres](docs/maps/map2_polygon.png)
 
-Komplexes Polygon, das ein Hangfeld simuliert. Der Vorgewende-Bereich (headland) ist lang, was U-turn-Behandlung anspruchsvoll macht.
+Ein komplexes Polygon mit 37 Eckpunkten. Trotz des Namens gibt es keine Steigung. Das lange
+Vorgewende macht die U-turn-Behandlung heikel.
 
-```
-polygon = [
-  (34.6805868, 126.9102540), (34.6804636, 126.9100401),
-  (34.6804514, 126.9100264), (34.6804341, 126.9100117),
-  (34.6804101, 126.9100000), (34.6803773, 126.9100074),
-  (34.6803447, 126.9100296), (34.6803099, 126.9100506),
-  (34.6802487, 126.9100895), (34.6801798, 126.9101240),
-  (34.6800194, 126.9101844), (34.6800025, 126.9101929),
-  (34.6800000, 126.9102047), (34.6800011, 126.9102220),
-  (34.6800076, 126.9102429), (34.6800240, 126.9102651),
-  (34.6800455, 126.9102861), (34.6800750, 126.9103133),
-  (34.6801236, 126.9103631), (34.6801328, 126.9103724),
-  (34.6801435, 126.9103860), (34.6801583, 126.9104057),
-  (34.6801838, 126.9104396), (34.6802037, 126.9104747),
-  (34.6802139, 126.9104994), (34.6802247, 126.9105198),
-  (34.6802354, 126.9105480), (34.6802425, 126.9105771),
-  (34.6802543, 126.9106086), (34.6802578, 126.9106314),
-  (34.6802619, 126.9106436), (34.6802696, 126.9106499),
-  (34.6802767, 126.9106461), (34.6802850, 126.9106363),
-  (34.6803441, 126.9105654), (34.6803610, 126.9105499),
-  (34.6803819, 126.9105290),
-]
-```
-
-#### M3 · Patchwork Plots (1.355 m², 54 Eckpunkte)
+#### M3 · Patchwork Plots
 
 ![M3 Patchwork Plots](docs/maps/map3_polygon.png)
 
-Unregelmäßiges Feld mit konkaven und konvexen Bereichen. Mit einem einfachen Boustrophedon-Ansatz verbleiben viele ungepflügte Bereiche — es sind Polygon-Clipping und bereichsspezifische Verarbeitung erforderlich.
+Ein unregelmäßiges Feld mit konkaven und konvexen Kanten (54 Eckpunkte). Ein einfaches
+Boustrophedon lässt viel ungepflügt — hier braucht es Polygon-Clipping und Behandlung je Teilfläche.
 
-```
-polygon = [
-  (35.4205363, 127.3902241), (35.4205148, 127.3901085),
-  (35.4205020, 127.3900000), (35.4202816, 127.3900305),
-  (35.4202305, 127.3900267), (35.4201433, 127.3900066),
-  (35.4201374, 127.3900667), (35.4201845, 127.3900979),
-  (35.4202004, 127.3901073), (35.4202145, 127.3901207),
-  (35.4202350, 127.3901547), (35.4202510, 127.3901941),
-  (35.4202633, 127.3902458), (35.4202652, 127.3902776),
-  (35.4202611, 127.3903620), (35.4201999, 127.3903605),
-  (35.4201579, 127.3903998), (35.4201428, 127.3904155),
-  (35.4201145, 127.3904243), (35.4200712, 127.3904327),
-  (35.4200707, 127.3904499), (35.4200667, 127.3904538),
-  (35.4200640, 127.3904632), (35.4200598, 127.3904727),
-  (35.4200525, 127.3904733), (35.4200484, 127.3904905),
-  (35.4200105, 127.3904933), (35.4200014, 127.3905578),
-  (35.4200000, 127.3905707), (35.4200178, 127.3905879),
-  (35.4200319, 127.3906068), (35.4200430, 127.3906307),
-  (35.4200766, 127.3906202), (35.4201037, 127.3906140),
-  (35.4201269, 127.3906073), (35.4201511, 127.3905483),
-  (35.4201598, 127.3905333), (35.4201770, 127.3905294),
-  (35.4202127, 127.3905333), (35.4202578, 127.3905433),
-  (35.4202830, 127.3904800), (35.4202971, 127.3904454),
-  (35.4203168, 127.3904127), (35.4203341, 127.3903826),
-  (35.4203501, 127.3903605), (35.4203743, 127.3903364),
-  (35.4203994, 127.3903132), (35.4204189, 127.3902909),
-  (35.4204427, 127.3902630), (35.4204637, 127.3902486),
-  (35.4204810, 127.3902407), (35.4205012, 127.3902347),
-  (35.4205213, 127.3902308), (35.4205394, 127.3902358),
-]
-```
+#### Detaillierte Spezifikationsdokumente
+
+Vollständige Polygonkoordinaten, Bodeneigenschaften und Traktordaten stehen in eigenen Dokumenten.
+
+| Dokument | Inhalt |
+|----------|--------|
+| [maps.md](docs/hackathon-2026/maps.md) | Kartengrößen, GPS-Ursprung, **vollständige `workArea`/`driveArea`-Polygonkoordinaten**, Bewertungsgrundlage der Bodenbearbeitung (0,2-m-Zellen, Abschluss 0,999) |
+| [terrain.md](docs/hackathon-2026/terrain.md) | Reibung, Traktionsgrenzen und Formeln des Bearbeitungswiderstands mit Werten |
+| [tractor-specs.md](docs/hackathon-2026/tractor-specs.md) | Physikalische Daten der drei Traktoren (klein · mittel · groß) |
+| [rddf-format.md](docs/hackathon-2026/rddf-format.md) | Spezifikation des RDDF-Formats |
+| [signal-flow.md](docs/hackathon-2026/signal-flow.md) | Wie deine App Sensorsignale empfängt und Befehle sendet |
+| [system-requirements.md](docs/hackathon-2026/system-requirements.md) | Anforderungen an den Teilnehmer-PC |
 
 ---
 
@@ -343,8 +320,8 @@ Als Ausgangspunkt gedacht - baue daraus deinen eigenen Algorithmus.
 
 import math
 
-# --- Feldursprung (unten links) und Umrechnung in lat/lon ---
-LAT0, LON0 = 35.8001, 126.8807
+# --- Feldursprung und Umrechnung in lat/lon (alle drei Wettbewerbskarten teilen ihn) ---
+LAT0, LON0 = 37.5665, 126.978
 M_PER_DEG_LAT = 110540.0
 M_PER_DEG_LON = 111320.0 * math.cos(math.radians(LAT0))
 
@@ -521,7 +498,7 @@ Nach dem Upload empfängt die App das RDDF über den `CloudDownloadListener` und
 | Punkt | Wert |
 |-------|------|
 | Startposition | Der **Spawn-Punkt der Karte**. Die Fahrfreigabe kommt erst, wenn Waypoint 0 deines RDDF dort liegt (§4.4) |
-| Zielfelder | **M1 · M2 · M3** öffentlich; **M4** hidden — Signale gesperrt bis zur Freigabe (§4.5) |
+| Zielfelder | **M1 · M2 · M3** (§4.5) |
 | Zielvorgabe | **Kein harter Cutoff** — auch bei niedriger Abdeckung wird gewertet |
 | Höchstgeschwindigkeit | **7 km/h** |
 | Anbaugerät | **Genau eines** pro Fahrt — ein Wechsel während der Aufzeichnung macht die Fahrt ungültig |
@@ -587,12 +564,11 @@ Ergebnis also nicht.
 
 Bestmarken-Zeiten je Karte für einen großen Traktor (`R = 4,9`) mit großem Pflug (`W = 3,6`):
 
-| Karte | Fläche (m²) | `D_ideal` (m) | Bestmarken-Zeit |
-|-------|-------------|---------------|-----------------|
-| M1 Open Fields | 1.500 | 570,5 | **587 s** (9m47s) |
-| M2 Sloped Acres | 1.948 | 756,5 | **778 s** (12m58s) |
-| M3 Patchwork Plots | 1.355 | 576,6 | **593 s** (9m53s) |
-| M4 Crooked Bottoms | 1.879 | 737,5 | **759 s** (12m39s) |
+| Karte | Gewertete Fläche (m²) | `D_ideal` (m) | Bestmarken-Zeit |
+|-------|-----------------------|---------------|-----------------|
+| M1 Open Fields | 1.499 | 570,5 | **587 s** (9m47s) |
+| M2 Sloped Acres | 1.947 | 756,5 | **778 s** (12m58s) |
+| M3 Patchwork Plots | 1.356 | 576,6 | **593 s** (9m53s) |
 
 Ein anderer Traktor oder ein anderes Anbaugerät ändert `R` und `W` — dann wird alles neu berechnet.
 
@@ -704,7 +680,7 @@ Fragen sind nach Themen gruppiert. Das `(§N)` am Ende jeder Antwort verweist au
 
 > **F1.** Wird eine RDDF-Datei für alle Karten eingereicht oder für jede Karte separat?
 
-**Für jede Karte separat hochladen.** Der Wettbewerb hat vier Karten — M1, M2 und M3 öffentlich, M4 hidden. Für jede Karte wird die zugehörige RDDF-Datei separat hochgeladen (dateiweise angegeben, z. B. `upload_rddf.sh -f ./1.rddf` — einen mapId-Parameter gibt es nicht). Punktzahlen pro Karte werden mit dem **Teamnamen** als Schlüssel summiert. (§4.5, §7.5)
+**Für jede Karte separat hochladen.** Der Wettbewerb verwendet drei Karten: M1, M2 und M3. Für jede Karte wird die zugehörige RDDF-Datei separat hochgeladen (dateiweise angegeben, z. B. `upload_rddf.sh -f ./1.rddf` — einen mapId-Parameter gibt es nicht). Punktzahlen pro Karte werden mit dem **Teamnamen** als Schlüssel summiert. (§4.5, §7.5)
 
 ---
 
