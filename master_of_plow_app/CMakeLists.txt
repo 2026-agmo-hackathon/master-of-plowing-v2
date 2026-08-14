@@ -29,11 +29,14 @@ set(MASTER_OF_PLOW_TIMER_MS "100")
 get_filename_component(MASTER_OF_PLOW_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
 set(MASTER_OF_PLOW_ECORE_SOURCE
     "${MASTER_OF_PLOW_ROOT}/com.bosch.fsp.master_of_plow/master_of_plow.ecore")
-# Every SeamOS build path stages or mounts the app directory alone, so the FSP
-# sibling above is not reachable from inside the container. `.fif-build-input/`
-# therefore carries a committed, byte-exact copy of the authoritative model and
-# is the path that actually gets used in a build. It is checked in for that
-# reason — it is a build input, not scratch.
+# Which of the two paths applies depends on the builder:
+#   nvx-fif-gen (build-fif.sh) assembles the FSP, the app and the SDK into one
+#     workspace, so the sibling above resolves.
+#   The SeamOS IDE mounts/stages the app directory alone — its parent holds no
+#     FSP — so only the copy below resolves.
+# `.fif-build-input/` therefore carries a committed, byte-exact copy of the
+# authoritative model. It is a build input, not scratch: without it the IDE
+# fails at configure time before compiling anything.
 if(NOT EXISTS "${MASTER_OF_PLOW_ECORE_SOURCE}")
   set(MASTER_OF_PLOW_ECORE_SOURCE
       "${CMAKE_CURRENT_SOURCE_DIR}/.fif-build-input/master_of_plow.ecore")
