@@ -41,9 +41,9 @@ master_of_plow/
 ├── master_of_plow_app/             # 앱 본체 (C++ 코드, 설정)
 │   └── src-gen/AppMain/tracking/   # 경로 추종 스켈레톤 — 읽기 전용 참고 (§10)
 ├── master_of_plow_CPP_SDK/         # SeamOS C++ SDK (제공)
-├── customui-src/                   # 대시보드 소스 (React) — master_of_plow_app/ui/ 로 빌드된다
+├── customui-src/                   # 대시보드 소스 (React + Vite)
 ├── rddf/                           # 참가자가 작성/검증하는 RDDF 영역
-├── docs/                           # 실행 트랜잭션·FIF 검증 문서
+├── docs/                           # 실행 오케스트레이션 · FIF 검증 문서
 └── HACKATHON_GUIDE.md              # 본 문서
 ```
 

@@ -41,9 +41,9 @@ master_of_plow/
 ├── master_of_plow_app/             # App-Hauptteil (C++-Code, Konfiguration)
 │   └── src-gen/AppMain/tracking/   # Pfadverfolgungs-Skelett — Referenz zum Lesen (§10)
 ├── master_of_plow_CPP_SDK/         # SeamOS C++ SDK (bereitgestellt)
-├── customui-src/                   # Dashboard-Quelle (React) — baut nach master_of_plow_app/ui/
+├── customui-src/                   # Dashboard-Quellcode (React + Vite)
 ├── rddf/                           # RDDF-Bereich (Erstellen & Validieren durch Teilnehmer)
-├── docs/                           # Ablauf der Fahrt-Transaktion und FIF-Validierung
+├── docs/                           # Ablaufsteuerung und FIF-Validierung
 └── HACKATHON_GUIDE.md              # Dieses Dokument
 ```
 

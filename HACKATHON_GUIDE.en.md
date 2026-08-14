@@ -41,9 +41,9 @@ master_of_plow/
 ├── master_of_plow_app/             # App body (C++ code, config)
 │   └── src-gen/AppMain/tracking/   # Path-tracking skeleton — read-only reference (§10)
 ├── master_of_plow_CPP_SDK/         # SeamOS C++ SDK (provided)
-├── customui-src/                   # Dashboard source (React) — builds into master_of_plow_app/ui/
+├── customui-src/                   # Dashboard source (React + Vite)
 ├── rddf/                           # RDDF area for participants to write/validate
-├── docs/                           # Run transaction and FIF validation notes
+├── docs/                           # Run orchestration and FIF validation notes
 └── HACKATHON_GUIDE.md              # This document
 ```
 

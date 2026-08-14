@@ -89,8 +89,8 @@ void MachineConnectListener::propertyChange(
     // ┌─ 한국어 ───────────────────────────────────────────────────────────┐
     // 플러그인 속성 변경을 CustomUI 소켓으로 중계하지 않는다.
     //
-    // 예전 로컬 시뮬레이터 디버그 페이지(ui/index.html)가 {"topic":...} 프레임을
-    // 읽던 흔적인데, 지금 React UI(ui/src/dashboard/useTelemetry.ts)는 kind 기반
+    // 예전 로컬 시뮬레이터 디버그 페이지가 {"topic":...} 프레임을
+    // 읽던 흔적인데, 지금 React UI(customui-src/src/dashboard/useTelemetry.ts)는 kind 기반
     // 프레임만 처리하고 topic 프레임은 전부 버린다. 그런데 이 중계는 초당 약
     // 290프레임을 쏟아부어 소켓 트래픽의 97%(측정: 15초에 4,229 / 4,376)를
     // 차지했고, 누적 약 4,400프레임(약 15초)마다 발행이 통째로 멎었다. 그러면
@@ -103,8 +103,8 @@ void MachineConnectListener::propertyChange(
     // Do not relay plugin property changes to the CustomUI socket.
     //
     // This mirrored every machine signal as a {"topic":...} frame for the old
-    // local-sim debug page (ui/index.html). The current React UI
-    // (ui/src/dashboard/useTelemetry.ts) only handles kind-based frames and
+    // local-sim debug page. The current React UI
+    // (customui-src/src/dashboard/useTelemetry.ts) only handles kind-based frames and
     // discards topic frames outright, yet the relay pushed ~290 frames/s — 97%
     // of all socket traffic (measured: 4,229 of 4,376 frames in 15 s) — and
     // publishing wedged completely after ~4,400 frames (~15 s). pp_telemetry

@@ -41,9 +41,9 @@ master_of_plow/
 ├── master_of_plow_app/             # แอปหลัก (C++ code, การตั้งค่า)
 │   └── src-gen/AppMain/tracking/   # โครงโค้ดการติดตามเส้นทาง — ไว้สำหรับอ่าน (§10)
 ├── master_of_plow_CPP_SDK/         # SeamOS C++ SDK (จัดเตรียมไว้ให้)
-├── customui-src/                   # ซอร์สแดชบอร์ด (React) — build ไปที่ master_of_plow_app/ui/
+├── customui-src/                   # ซอร์สของแดชบอร์ด (React + Vite)
 ├── rddf/                           # พื้นที่ RDDF ที่ผู้เข้าแข่งขันเขียนและตรวจสอบ
-├── docs/                           # เอกสารทรานแซกชันการวิ่งและการตรวจสอบ FIF
+├── docs/                           # เอกสาร run orchestration และการตรวจสอบ FIF
 └── HACKATHON_GUIDE.md              # เอกสารนี้
 ```
 

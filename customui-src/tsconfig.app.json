@@ -19,10 +19,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "composite": true,
-    "baseUrl": ".",
-    "paths": {
-      "proj4": ["./node_modules/proj4"]
-    }
+    "baseUrl": "."
   },
-  "include": ["src", "./helpers/**/*.ts"]
+  "include": ["src"]
 }

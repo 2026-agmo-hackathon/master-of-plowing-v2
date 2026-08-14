@@ -41,12 +41,11 @@ validation path.
 | `master_of_plow_CPP_SDK/` | SeamOS C++ SDK, bundled so a clone builds anywhere |
 | `customui-src/` | Dashboard source (React + Vite). Builds into `master_of_plow_app/ui/` |
 | `rddf/` | Your RDDF inputs, plus the upload helper and format docs |
-| `references/` | Sample simulation inputs |
 | `docs/` | Run orchestration, FIF validation, and local-dev notes |
 
 `master_of_plow_app/ui/` is **not** committed. It is entirely build output of
-`customui-src/` — the `public/` assets plus the Vite bundle. The IDE regenerates
-it during the FIF build. To produce it by hand:
+`customui-src/`. The IDE regenerates it during the FIF build. To produce it by
+hand:
 
 ```bash
 cd customui-src
@@ -61,6 +60,12 @@ npm run test
 ```
 
 C++ unit tests build with the App/Test modules from the IDE.
+
+`customui-src/` holds only what the dashboard ships: `src/main.tsx`,
+`src/dashboard/**`, and the eight static assets `index.html` references (four
+favicons and four fonts). Its runtime dependencies are React, `@seamos/ads`, and
+`@seamos/connect` — there is no 3D engine, map library, or asset pipeline in the
+way. Add whatever your dashboard needs.
 
 ## What the app already does
 

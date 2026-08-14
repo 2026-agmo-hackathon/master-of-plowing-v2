@@ -1,13 +1,16 @@
 # Distribution boundary and local developer bridge
 
 The versioned participant-source boundary is
-`distribution/participant-deliverable-v1.json`. It includes the application,
-feature model/generated sources, participant RDDF inputs, canonical UI runtime,
-guides, and required references. It excludes workflow evidence and machine-local
-state (`artifacts/`, `provenance/`, `.agmo/`, `.serena/`), caches, dependency and
-build trees, logs, validation routes/scripts, the packaged `master_of_plow_app/ui`
-output, and top-level UI unit tests. The tests remain in the development
-workspace but are not FIF runtime content.
+`distribution/participant-deliverable-v1.json`. It includes the application, the
+C++ SDK, feature model/generated sources, participant RDDF inputs, the canonical
+UI runtime in `customui-src/`, and the guides. It excludes workflow evidence and
+machine-local state (`artifacts/`, `provenance/`, `references/`, `.agmo/`,
+`.serena/`), internal tooling (`tools/`), caches, dependency and build trees,
+logs, validation routes/scripts, and the packaged `master_of_plow_app/ui` output.
+
+The dashboard unit tests under `customui-src/src/dashboard/` are part of the
+deliverable — participants run them with `npm run test` — but they are excluded
+from the UI runtime hash because they are not FIF runtime content.
 
 Run `python3 tools/check_distribution.py` from the repository root. It prints
 the exact sorted file list, a content hash for that list, and the canonical UI

@@ -72,8 +72,6 @@ run*.log
 !**/disk/
 !**/disk/seed/
 !**/disk/seed/**
-# references/ ships sample simulation inputs that live under a disk/ path.
-!references/**
 
 # Feature Designer local inputs and offline data
 _interface.json
