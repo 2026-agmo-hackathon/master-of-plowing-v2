@@ -93,6 +93,25 @@ export interface PpTelemetry {
   longD?: number
   longTargetMps?: number
   longReversing?: number | boolean
+  longRequestedMps?: number
+  // 개도 변조기. 이 기계의 개도는 릴레이라(0보다 크기만 하면 그 단의 속도),
+  // 단이 목표보다 빠르면 개도를 끊었다 열었다 해서 평균을 맞춥니다.
+  // longDebtM 은 "초과속으로 앞서 나간 거리"이고, 스위칭 문턱을 미는 값입니다.
+  // The opening modulator. The opening on this machine is a relay — anything
+  // above zero gives the stage's speed — so when the stage is faster than the
+  // target the opening is pulsed to average it out. longDebtM is the distance
+  // gained by overspeeding, which is what pushes the switching threshold.
+  longThrottleGated?: number | boolean
+  longDebtM?: number
+  longCoastDecel?: number
+  longBelowSlowestStage?: number | boolean
+  // 단 선택 폐루프. longStageMeasured 가 거짓이면 longStageKmh 는 아직 실측이
+  // 아니라 사전값이므로 0 으로 옵니다.
+  // Closed-loop stage selection. A false longStageMeasured means longStageKmh is
+  // still a prior rather than a measurement, and arrives as 0.
+  longStageKmh?: number
+  longStageMeasured?: number | boolean
+  longFloorKmh?: number
 }
 
 export interface TrackComplete {

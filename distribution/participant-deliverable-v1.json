@@ -105,8 +105,8 @@
   ],
   "uiRuntime": {
     "path": "customui-src",
-    "canonicalSource": "workspace v1.1.51 backend-orchestrated dashboard",
-    "sha256": "cb42eb1d0e200d5380259e2170ecb9499a986ada136db7a85f227018f38ae1f0",
+    "canonicalSource": "workspace v1.1.56 backend-orchestrated dashboard",
+    "sha256": "00d6cae74741f1a141e863675fd6f8995e0b3b5ba1d501c21a483375697e64ab",
     "excludeGlobs": [
       "node_modules/**",
       "dist/**",

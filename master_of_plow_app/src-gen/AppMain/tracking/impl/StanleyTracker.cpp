@@ -276,6 +276,15 @@ TrackerCommand StanleyTracker::update(const VehicleState& state, double dtS)
     debug_.put("longD", longitudinal.dTerm);
     debug_.put("longTargetMps", longitudinal.targetMps);
     debug_.put("longReversing", longitudinal.brakingForReversal ? 1.0 : 0.0);
+    debug_.put("longRequestedMps", longitudinal.requestedMps);
+    debug_.put("longThrottleGated", longitudinal.throttleGated ? 1.0 : 0.0);
+    debug_.put("longBelowSlowestStage",
+               longitudinal.belowSlowestStage ? 1.0 : 0.0);
+    debug_.put("longDebtM", longitudinal.debtM);
+    debug_.put("longCoastDecel", longitudinal.coastDecelMps2);
+    debug_.put("longStageKmh", longitudinal.stageSustainedKmh);
+    debug_.put("longStageMeasured", longitudinal.stageMeasured ? 1.0 : 0.0);
+    debug_.put("longFloorKmh", longitudinal.machineFloorKmh);
 
     TrackerCommand cmd{steerAngle, longitudinal.throttle, longitudinal.brake,
                        longitudinal.gear, wp.implementFlag};

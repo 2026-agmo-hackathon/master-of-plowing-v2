@@ -30,6 +30,13 @@ export function LongitudinalTab({ f, h }: { f: PpTelemetry; h: Histories }) {
     (f.targetSpeedKmh !== undefined ? f.targetSpeedKmh / 3.6 : undefined)
   const reversing =
     f.longReversing === undefined ? undefined : Boolean(f.longReversing)
+  const throttleGated =
+    f.longThrottleGated === undefined ? undefined : Boolean(f.longThrottleGated)
+  const belowSlowestStage =
+    f.longBelowSlowestStage === undefined
+      ? undefined
+      : Boolean(f.longBelowSlowestStage)
+  const stageMeasured = Boolean(f.longStageMeasured)
 
   return (
     <>
@@ -62,6 +69,56 @@ export function LongitudinalTab({ f, h }: { f: PpTelemetry; h: Histories }) {
           keyName="targetSpeedKmh"
           value={fmt(f.targetSpeedKmh, 1)}
           unit="km/h"
+          color={belowSlowestStage ? theme.warn : theme.text}
+        />
+      </Card>
+
+      {/* ┌─ 설계 의도 / Design intent ──────────────────────────────────────┐
+          이 기계에서 속도를 정하는 것은 개도가 아니라 변속단입니다. 목표를 못
+          내고 있을 때 그것이 (a) 아직 학습 중인지 (b) 최상단인데도 부족한지는
+          이 카드 없이는 구분할 수 없고, 그 둘은 대응이 전혀 다릅니다 —
+          전자는 기다리면 되고, 후자는 경로 속도를 낮춰야 합니다.
+
+          The stage, not the opening, sets the speed on this machine. Without
+          this card there is no way to tell "still learning" from "top stage and
+          still short", and the two call for opposite responses: wait, versus
+          lower the route speed.
+          └──────────────────────────────────────────────────────────────────┘ */}
+      <Card title="변속단 능력 · Stage capability" span={2}>
+        <KVRow
+          label="이 단이 내는 속도"
+          keyName="longStageKmh"
+          value={stageMeasured ? fmt(f.longStageKmh, 2) : '측정 중'}
+          unit={stageMeasured ? 'km/h' : ''}
+          color={stageMeasured ? theme.text : theme.textDim}
+        />
+        <KVRow
+          label="가장 느린 단"
+          keyName="longFloorKmh"
+          value={fmt(f.longFloorKmh, 2)}
+          unit="km/h"
+          color={belowSlowestStage ? theme.warn : theme.text}
+        />
+        <KVRow
+          label="개도 끊김 (변조)"
+          keyName="longThrottleGated"
+          value={
+            throttleGated === undefined ? '—' : throttleGated ? '예' : '아니오'
+          }
+          color={throttleGated ? theme.warn : theme.text}
+        />
+        <KVRow
+          label="앞서 나간 거리"
+          keyName="longDebtM"
+          value={fmtSigned(f.longDebtM, 2)}
+          unit="m"
+        />
+        <KVRow
+          label="코스팅 감속 (실측)"
+          keyName="longCoastDecel"
+          value={f.longCoastDecel ? fmt(f.longCoastDecel, 2) : '측정 중'}
+          unit={f.longCoastDecel ? 'm/s²' : ''}
+          color={f.longCoastDecel ? theme.text : theme.textDim}
         />
       </Card>
       <Card title="구동계 실제" span={2}>

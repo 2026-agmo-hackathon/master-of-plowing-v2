@@ -1181,7 +1181,18 @@ TrackerCommand PurePursuitTracker::update(const VehicleState& state, double dtS)
         // What the path asked for vs. what was followed after the machine-floor
         // clamp. Differing values mean that stretch did not run at the RDDF speed.
         debug_.put("longRequestedMps", longitudinal.requestedMps);
-        debug_.put("longFloorClamped", longitudinal.targetRaisedToFloor ? 1.0 : 0.0);
+        debug_.put("longThrottleGated", longitudinal.throttleGated ? 1.0 : 0.0);
+        debug_.put("longBelowSlowestStage",
+                   longitudinal.belowSlowestStage ? 1.0 : 0.0);
+        debug_.put("longDebtM", longitudinal.debtM);
+        debug_.put("longCoastDecel", longitudinal.coastDecelMps2);
+        // 단 선택 폐루프의 상태. 목표를 못 내고 있을 때 이 셋이 없으면 "아직
+        // 학습 중"과 "최상단인데도 부족함"을 구분할 수 없습니다.
+        // Closed-loop stage state: without these three, "still learning" and
+        // "top stage and still short" look identical from outside.
+        debug_.put("longStageKmh", longitudinal.stageSustainedKmh);
+        debug_.put("longStageMeasured", longitudinal.stageMeasured ? 1.0 : 0.0);
+        debug_.put("longFloorKmh", longitudinal.machineFloorKmh);
     }
 
     TrackerCommand cmd{steerAngle, throttle, brake, gear, implement};
