@@ -26,6 +26,22 @@
   overflow-wrap: anywhere;
 }
 
+/* SimWorld 물리 페이지 건강 배너 — 「Start 눌렀는데 무반응」의 최다 원인이라
+   필드 위에 둔다. 경고색 테두리로 거부(critical)와 구분한다.
+   SimWorld page-health banner: the top cause of a silent Start, so it sits
+   above the fields; warning border keeps it apart from rejections. */
+.run-setup-simworld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--ads-color-warning);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ads-color-warning) 12%, transparent);
+  overflow-wrap: anywhere;
+}
+
 .run-setup-records { margin-top: 12px; }
 
 /* 미제출 기록 모달 — 껍데기(dimmer·라운드·푸터)는 ADS Popup 이 소유한다.

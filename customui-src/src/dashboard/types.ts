@@ -156,6 +156,20 @@ export interface OrchestrationState {
     snapshotAgeMs: number
     /** Local monotonic receipt time; added by useTelemetry, never sent by backend. */
     receivedAtMonoMs?: number
+    /** SimWorld 물리 루프 자가 진단 — 시뮬레이터 페이지가 가려지거나(hidden)
+     *  절전에서 못 깨어나면(schedule='timer') API 는 다 살아 있는데 세계만
+     *  멈춘다. 이 필드가 그 유일한 증거다. 옛 백엔드 FIF 는 보내지 않는다.
+     *  SimWorld's physics-loop self-diagnosis: an occluded page (hidden) or an
+     *  unrecovered throttle (schedule='timer') stops the world while every API
+     *  stays up, and this is the only evidence. Older backend FIFs omit it. */
+    loopDiag?: {
+      hidden?: boolean
+      /** 'raf' = 건강, 'timer' = 스로틀 상태 / 'raf' healthy, 'timer' throttled */
+      schedule?: string
+      droppedMs?: number
+      ticks?: number
+      stopFrom?: string
+    }
   }
   desiredSetup?: { mapId?:string; tractorId?:string; implementId?:string }
   confirmedSetup?: { mapId?:string; tractorId?:string; implementId?:string }

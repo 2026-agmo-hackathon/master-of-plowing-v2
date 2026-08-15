@@ -30,6 +30,17 @@ struct Selection {
     bool live = false;
     long long snapshotAgeMs = -1;
     long long simElapsedMs = -1;
+    // SimWorld 물리는 브라우저 페이지 안에서 돈다 — 창이 가려지거나(hidden)
+    // 절전에서 못 깨어나면(schedule=timer) 모든 API 는 살아 있는데 세계만
+    // 멈춘다. loopDiag 가 그 유일한 증거이므로 화면까지 그대로 나른다.
+    // SimWorld physics runs inside a browser page: occlusion (hidden) or an
+    // unrecovered throttle (schedule=timer) stops the world while every API
+    // stays up. loopDiag is the only evidence, so it rides through to the UI.
+    bool pageHidden = false;
+    std::string schedule;
+    long long droppedMs = -1;
+    long long ticks = -1;
+    std::string stopFrom;
 };
 
 struct RecorderState {

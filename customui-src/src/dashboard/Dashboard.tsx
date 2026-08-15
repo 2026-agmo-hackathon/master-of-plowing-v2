@@ -292,15 +292,37 @@ export function RunSetup({ orchestration: o, leaderboard, recordingDownload, lin
   const fresh=Boolean(o?.selection.live && effectiveAge >= 0
     && effectiveAge <= SELECTION_STALE_BUDGET_MS)
   const physicallyStopped=Boolean(o?.selection.stopped && !o?.selection.reactRunning)
-  const teamEditable=link === 'live' && fresh
-    && physicallyStopped && runState !== 'running'
-    && (!o?.busy || Boolean(o?.setupApplying))
+  // 팀 이름은 로컬 문자열이다 — 입력해도 시뮬레이터를 건드리지 않고, Start 가
+  // 어차피 서버에서 재검증한다. 그런데 신선도·busy 게이트를 물리면 폴링마다
+  // 게이트가 퍼덕일 때 input 이 disabled 로 바뀌며 브라우저가 포커스를 뺏는다 —
+  // "입력 중에 자꾸 멈춤"의 정체. 잠그는 조건은 주행 중 하나뿐이고, 그마저
+  // disabled 가 아니라 readOnly 로 잠근다(포커스를 뺏지 않고 복사도 된다).
+  // The team name is a local string: typing touches nothing in the simulator,
+  // and Start re-validates server-side anyway. Gating it on freshness/busy made
+  // the input flip to disabled whenever a poll flapped the gates, and a disabled
+  // control steals focus — the "keeps interrupting my typing" bug. The only
+  // lock left is an active run, applied as readOnly, which never steals focus.
+  const teamEditable=runState !== 'running' && o?.phase !== 'starting' && o?.phase !== 'running'
   const editable=link === 'live' && fresh && physicallyStopped
     && !o?.busy && !o?.setupApplying && runState !== 'running'
   const complete=Boolean(teamName.trim() && mapId && tractorId && implementId)
   const leaderboardCaptureBlocking=isCurrentRunCaptureBlocking(o,leaderboard)
   const postRun=Boolean(o?.recordingId && o.finalization==='completed')
   const finishRetry=o?.finalization==='retryable_error'
+  // SimWorld 물리는 브라우저 페이지 안에서 돈다. 창이 가려지면(hidden) 세계가
+  // 멈추고, 오래(약 5분+) 가려졌던 페이지는 다시 보여도 schedule='timer' 에
+  // 갇혀 스스로 깨어나지 못한다 — 둘 다 Start 가 조용히 무의미해지는 상태인데
+  // 지금까지 화면에는 아무 표시가 없었다. loopDiag 가 없는 옛 FIF 는 침묵한다.
+  // SimWorld physics runs inside a browser page. An occluded page (hidden)
+  // freezes the world, and a page hidden long enough (~5 min+) stays wedged on
+  // schedule='timer' even once visible again — both make Start silently
+  // meaningless, and neither had any on-screen evidence until now. Old FIFs
+  // without loopDiag stay silent.
+  const loop=o?.selection.loopDiag
+  const simHidden=loop?.hidden===true
+  const simThrottled=loop?.hidden===false&&loop?.schedule==='timer'
+  const simDroppedS=loop?.droppedMs!==undefined&&loop.droppedMs>0
+    ?Math.round(loop.droppedMs/1000):undefined
   const sendSetup=(next:{teamName:string;mapId:string;tractorId:string;implementId:string}) => {
     if(next.mapId && next.tractorId && next.implementId)
       send(buildSetupIntent(next))
@@ -343,8 +365,20 @@ export function RunSetup({ orchestration: o, leaderboard, recordingDownload, lin
   }
   return <section style={{background:theme.cardBg,border:`1px solid ${theme.border}`,borderRadius:8,padding:14}}>
     <Paragraph typography="lg" fontWeight="bold" color={theme.text}>Run setup</Paragraph>
+    {(simHidden||simThrottled)&&<div className="run-setup-simworld" data-testid="simworld-health" role="alert">
+      <Paragraph typography="s" fontWeight="bold" color={theme.warn}>
+        {simHidden
+          ?'시뮬레이터 창이 가려져 있거나 백그라운드입니다 — 물리 세계가 멈춰 Start 를 눌러도 트랙터가 움직이지 않습니다.'
+          :'시뮬레이터 페이지가 절전에서 깨어나지 못했습니다 — 물리 세계가 멈춰 있습니다.'}
+      </Paragraph>
+      <Paragraph typography="xs" color={theme.textSub}>
+        {simHidden
+          ?`SimWorld 창을 다른 창에 가리지 말고 화면에 보이게 두세요.${simDroppedS!==undefined?` 멈춘 시간 약 ${simDroppedS}초.`:''}`
+          :`시뮬레이터 화면이 보이는 상태에서 그 페이지만 새로고침하세요. 오래 가려졌던 페이지는 다시 보여도 스스로 복구되지 않습니다. 주행 기록이 있으면 새로고침 전에 Finish → Submit/Reset 을 먼저 마치세요.${simDroppedS!==undefined?` 멈춘 시간 약 ${simDroppedS}초.`:''}`}
+      </Paragraph>
+    </div>}
     <div data-testid="run-fields" className="run-setup-fields">
-      <label style={{color:theme.textSub}}>Team name<input aria-label="Team name" value={teamName} disabled={!teamEditable} onChange={(e)=>changeTeam(e.target.value)} style={controlStyle}/></label>
+      <label style={{color:theme.textSub}}>Team name<input aria-label="Team name" value={teamName} readOnly={!teamEditable} onChange={(e)=>changeTeam(e.target.value)} style={teamEditable?controlStyle:{...controlStyle,opacity:0.55}}/></label>
       <CatalogSelect label="Map" value={mapId} disabled={!editable} items={o?.maps ?? []} onChange={(v)=>changeSelection('mapId',v)}/>
       <CatalogSelect label="Tractor" value={tractorId} disabled={!editable} items={o?.tractors ?? []} onChange={(v)=>changeSelection('tractorId',v)}/>
       <CatalogSelect label="Implement" value={implementId} disabled={!editable} items={o?.implements ?? []} onChange={(v)=>changeSelection('implementId',v)} showWidth/>

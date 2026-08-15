@@ -180,6 +180,55 @@ describe('RunSetup',()=>{
     expect(idle).not.toContain('finish-retry')
   })
 
+  // 회귀: 게이트(신선도·busy)가 폴링마다 퍼덕이면 input 이 disabled 로 바뀌고
+  // 브라우저는 disabled 컨트롤에서 포커스를 뺏는다 — "입력 중에 자꾸 멈춤".
+  // 팀 이름은 로컬 문자열이므로 잠글 이유가 주행 중 하나뿐이고, 그때도
+  // readOnly 로 잠근다(포커스 유지, 복사 가능).
+  // Regression: flapping gates (freshness/busy) flipped the input to disabled,
+  // and the browser steals focus from a disabled control — the "keeps
+  // interrupting my typing" bug. The name is local, so the only lock is an
+  // active run, and even that is readOnly, which never steals focus.
+  it('keeps the team input focusable: never disabled, readOnly only while a run is active',()=>{
+    const stale={...state,selection:{...state.selection,snapshotAgeMs:SELECTION_STALE_BUDGET_MS+1000}}
+    const staleHtml=renderToStaticMarkup(<RunSetup orchestration={stale} recordingDownload={null} link="live" runState="idle" send={vi.fn()}/>)
+    expect(staleHtml).not.toMatch(/aria-label="Team name"[^>]*disabled/)
+    expect(staleHtml).not.toMatch(/aria-label="Team name"[^>]*readonly/i)
+    const busyHtml=renderToStaticMarkup(<RunSetup orchestration={{...state,busy:true}} recordingDownload={null} link="live" runState="idle" send={vi.fn()}/>)
+    expect(busyHtml).not.toMatch(/aria-label="Team name"[^>]*(disabled|readonly)/i)
+    const offlineHtml=renderToStaticMarkup(<RunSetup orchestration={state} recordingDownload={null} link="closed" runState="idle" send={vi.fn()}/>)
+    expect(offlineHtml).not.toMatch(/aria-label="Team name"[^>]*(disabled|readonly)/i)
+    const runningHtml=renderToStaticMarkup(<RunSetup orchestration={state} recordingDownload={null} link="live" runState="running" send={vi.fn()}/>)
+    expect(runningHtml).toMatch(/aria-label="Team name"[^>]*readonly/i)
+    expect(runningHtml).not.toMatch(/aria-label="Team name"[^>]*disabled/)
+  })
+
+  // SimWorld 물리는 브라우저 페이지 안에서 돈다 — 창이 가려지거나 절전에서 못
+  // 깨어나면 Start 가 조용히 무의미해진다. loopDiag 가 그 유일한 증거다.
+  // SimWorld physics lives in a browser page: occlusion or an unrecovered
+  // throttle makes Start silently meaningless, and loopDiag is the only evidence.
+  it('raises the SimWorld health alert for a hidden or throttle-wedged sim page',()=>{
+    const hidden={...state,selection:{...state.selection,
+      loopDiag:{hidden:true,schedule:'timer',droppedMs:182000,ticks:649}}}
+    const hiddenHtml=renderToStaticMarkup(<RunSetup orchestration={hidden} recordingDownload={null} link="live" runState="idle" send={vi.fn()}/>)
+    expect(hiddenHtml).toContain('simworld-health')
+    expect(hiddenHtml).toContain('가려져')
+    expect(hiddenHtml).toContain('182초')
+
+    const wedged={...state,selection:{...state.selection,
+      loopDiag:{hidden:false,schedule:'timer',droppedMs:300000,ticks:12}}}
+    const wedgedHtml=renderToStaticMarkup(<RunSetup orchestration={wedged} recordingDownload={null} link="live" runState="idle" send={vi.fn()}/>)
+    expect(wedgedHtml).toContain('simworld-health')
+    expect(wedgedHtml).toContain('새로고침')
+
+    const healthy={...state,selection:{...state.selection,
+      loopDiag:{hidden:false,schedule:'raf',droppedMs:0,ticks:16239}}}
+    expect(renderToStaticMarkup(<RunSetup orchestration={healthy} recordingDownload={null} link="live" runState="idle" send={vi.fn()}/>))
+      .not.toContain('simworld-health')
+    // loopDiag 를 모르는 옛 FIF 는 침묵해야 한다 / an old FIF without loopDiag stays silent
+    expect(renderToStaticMarkup(<RunSetup orchestration={state} recordingDownload={null} link="live" runState="idle" send={vi.fn()}/>))
+      .not.toContain('simworld-health')
+  })
+
   it('formats recording sizes in binary units and rejects absent values',()=>{
     expect(formatBytes(0)).toBe('0 B')
     expect(formatBytes(1023)).toBe('1023 B')

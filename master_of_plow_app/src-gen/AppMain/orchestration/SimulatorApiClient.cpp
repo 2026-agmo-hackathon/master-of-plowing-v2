@@ -75,6 +75,14 @@ void parseSelection(const Json::Value& v, Selection& s)
     s.stopped=boolean(v,"stopped"); s.reactRunning=boolean(v,"reactRunning");
     s.live=boolean(v,"live");
     s.snapshotAgeMs=integer(v,"snapshotAgeMs"); s.simElapsedMs=integer(v,"simElapsedMs");
+    const Json::Value& d=v["loopDiag"];
+    if(d.isObject()) {
+        s.pageHidden=boolean(d,"hidden");
+        s.schedule=text(d,"schedule");
+        s.droppedMs=integer(d,"droppedMs");
+        s.ticks=integer(d,"ticks");
+        s.stopFrom=text(d,"stopFrom");
+    }
 }
 
 }

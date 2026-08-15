@@ -94,6 +94,12 @@ std::string orchestrationSnapshotJson(const orchestration::Snapshot& s)
     root["selection"]["reactRunning"] = selected.reactRunning;
     root["selection"]["live"] = selected.live;
     root["selection"]["snapshotAgeMs"] = Json::Int64(selected.snapshotAgeMs);
+    Json::Value& diag = root["selection"]["loopDiag"];
+    diag["hidden"] = selected.pageHidden;
+    diag["schedule"] = selected.schedule;
+    diag["droppedMs"] = Json::Int64(selected.droppedMs);
+    diag["ticks"] = Json::Int64(selected.ticks);
+    diag["stopFrom"] = selected.stopFrom;
     root["desiredSetup"]["mapId"] = s.desiredSetup.mapId;
     root["desiredSetup"]["tractorId"] = s.desiredSetup.tractorId;
     root["desiredSetup"]["implementId"] = s.desiredSetup.implementId;
