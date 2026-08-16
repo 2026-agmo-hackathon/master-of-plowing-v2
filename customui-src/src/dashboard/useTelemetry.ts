@@ -265,10 +265,8 @@ export function useTelemetry(): Telemetry {
             if(kind==='unsubmitted_records') {
               const rows=(msg as {records?:unknown}).records
               if(Array.isArray(rows))void leaderboardServiceRef.current?.outboxStates().then(states=>{
-                const merged=new Map<string,UnsubmittedRecord>()
-                for(const state of states)if(state.runId&&state.status!=='submitted'&&state.status!=='invalid')merged.set(state.runId,{runId:state.runId,teamName:state.teamName,createdAt:state.createdAt??'',bytes:0,csvAvailable:false,outboxStatus:state.status,outboxError:state.error})
-                for(const record of rows.filter((r):r is UnsubmittedRecord=>Boolean(r&&typeof r==='object'&&typeof (r as UnsubmittedRecord).runId==='string'))){const outbox=states.find(state=>state.runId===record.runId);merged.set(record.runId,{...record,outboxStatus:outbox?.status,outboxError:outbox?.error})}
-                setUnsubmittedRecords([...merged.values()].sort((a,b)=>a.runId.localeCompare(b.runId)))
+                setUnsubmittedRecords(mergeUnsubmittedRecords(
+                  rows.filter((r):r is UnsubmittedRecord=>Boolean(r&&typeof r==='object'&&typeof (r as UnsubmittedRecord).runId==='string')),states))
               })
               return
             }
@@ -458,3 +456,33 @@ export function useTelemetry(): Telemetry {
 
 export const buildSubmitIntent=(runId:string)=>({kind:'begin_sealed_capture',runId})
 export const buildResetIntent=(runId:string)=>({kind:'reset_run',runId})
+
+export type OutboxStateRow={runId?:string;status:LeaderboardState['status'];teamName?:string;createdAt?:string;error?:string;retryAllowed?:boolean;hasEnvelope?:boolean}
+
+/** 백엔드 목록(디스크의 CSV)과 브라우저 아웃박스를 한 목록으로 합친다.
+ *
+ *  아웃박스에만 있는 행은 종결 상태(submitted/invalid/failed_terminal)를
+ *  거른다. 특히 failed_terminal 은 「모두 제거」가 남기는 폐기 표식이라 —
+ *  드레인은 IndexedDB 행을 지우지 않고 이 상태로 바꿔만 둔다 — 거르지 않으면
+ *  전체 삭제 뒤에도 목록에 영원히 되살아났다. 디스크에 CSV 가 실존하는 행은
+ *  항상 실리고, 아웃박스 상태는 주석으로만 붙는다.
+ *
+ *  Merges the backend list (CSV files on disk) with the browser outbox.
+ *  Outbox-only rows in a terminal state (submitted/invalid/failed_terminal)
+ *  are dropped: failed_terminal is the marker purge-all leaves behind — the
+ *  drain never deletes IndexedDB rows, it only flips them to this state — so
+ *  without this filter every purged record resurrected in the list forever.
+ *  Rows whose CSV really exists on disk always show, with the outbox state
+ *  attached as an annotation only. */
+export function mergeUnsubmittedRecords(rows:UnsubmittedRecord[],states:OutboxStateRow[]):UnsubmittedRecord[]{
+  const merged=new Map<string,UnsubmittedRecord>()
+  for(const state of states){
+    if(!state.runId||state.status==='submitted'||state.status==='invalid'||state.status==='failed_terminal')continue
+    merged.set(state.runId,{runId:state.runId,teamName:state.teamName??'',createdAt:state.createdAt??'',bytes:0,csvAvailable:false,outboxStatus:state.status,outboxError:state.error,outboxRetryAllowed:state.retryAllowed,outboxHasEnvelope:state.hasEnvelope})
+  }
+  for(const record of rows){
+    const outbox=states.find(state=>state.runId===record.runId)
+    merged.set(record.runId,{...record,outboxStatus:outbox?.status,outboxError:outbox?.error,outboxRetryAllowed:outbox?.retryAllowed,outboxHasEnvelope:outbox?.hasEnvelope})
+  }
+  return [...merged.values()].sort((a,b)=>a.runId.localeCompare(b.runId))
+}

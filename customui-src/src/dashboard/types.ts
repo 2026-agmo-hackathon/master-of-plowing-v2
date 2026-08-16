@@ -201,6 +201,13 @@ export interface UnsubmittedRecord {
   error?:string
   outboxStatus?:LeaderboardState['status']
   outboxError?:string
+  outboxRetryAllowed?:boolean
+  /** 브라우저 아웃박스가 이 주행의 봉인본을 들고 있는지. 서버는 현재 레코더
+   *  내용만 봉인하므로, 과거 주행의 개별 재제출은 이 값이 참일 때만 가능하다.
+   *  Whether the browser outbox holds this run's sealed envelope. The server
+   *  seals only the current recorder content, so an archived run can be
+   *  resubmitted individually only when this is true. */
+  outboxHasEnvelope?:boolean
 }
 
 /** 백엔드 tuning_state 프레임 — 튜닝 채널의 유일한 하행 메시지.

@@ -1203,7 +1203,21 @@ bool RunOrchestrator::markLeaderboardSubmitted(const std::string& runId,const st
     Snapshot copy;
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        if(snapshot_.recordingId!=runId)return false;
+        // 현재 주행이 아닌 runId 는 보관된 과거 주행이다. 브라우저 아웃박스는
+        // 봉인본을 들고 있다가 주행이 끝난 한참 뒤에 제출을 끝낼 수 있는데,
+        // 그 보고를 "현재 주행이 아님"으로 거부하면 원장이 갱신되지 않아 CSV 가
+        // 영원히 미제출로 남고 대시보드에는 오류 프레임까지 떴다. 주행 후 상태
+        // 기계는 현재 주행만 다루므로, 과거 주행은 원장 기록만 하고 전이는
+        // 만들지 않는다(원장은 집합 삽입이라 멱등하다).
+        // A runId other than the current run names an archived one. The browser
+        // outbox can finish submitting a stored envelope long after the run
+        // ended; rejecting that report as "not the current run" left the ledger
+        // stale — the CSV stayed listed as unsubmitted forever and the
+        // dashboard received an error frame. The post-run state machine covers
+        // only the current run, so archived runs get the ledger write and no
+        // transition (the ledger is a set insert, hence idempotent).
+        if(snapshot_.recordingId!=runId)
+            return store_.markSubmitted(runId,verdict).ok;
         // The browser persists a terminal result before sending this frame and
         // replays it until the backend snapshot confirms Submitted.  A lost
         // reply must therefore be an idempotent success, not an error.

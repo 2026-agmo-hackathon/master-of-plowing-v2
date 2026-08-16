@@ -143,7 +143,13 @@ export class BrowserLeaderboardService{
     while(Date.now()<deadline){const live=await this.d.store.liveTabs(Date.now(),expiry),acks=await Promise.all(live.map(tab=>this.d.store.drainAcknowledged(request.requestId,tab)));if(acks.every(Boolean))return true;await new Promise(resolve=>setTimeout(resolve,25))}
     return false
   }
-  async outboxStates(){return (await this.d.store.all()).map(record=>({...state(record),teamName:record.teamName,createdAt:record.createdAt}))}
+  // hasEnvelope 는 개별 재제출 가능성의 근거다: 봉인본은 현재 레코더 내용만
+  // 서버가 봉인해 주므로, 과거 주행은 여기 저장된 봉인본이 있을 때만 다시
+  // 제출할 수 있다.
+  // hasEnvelope grounds per-record resubmission: the server only seals the
+  // current recorder content, so an archived run is submittable again only if
+  // its envelope is already stored here.
+  async outboxStates(){return (await this.d.store.all()).map(record=>({...state(record),teamName:record.teamName,createdAt:record.createdAt,hasEnvelope:Boolean(record.envelope)}))}
   shutdown(){this.stopped=true;this.authorityReady=false;this.authorityAbort.abort();this.abortActive();if(this.heartbeatTimer)clearInterval(this.heartbeatTimer);this.purgeChannel?.close()}
   private async persist(r:OutboxRecord){await this.d.store.put(r);this.d.publish?.(state(r))}
   private async persistOwned(r:OutboxRecord,opToken:string){const ok=await this.d.store.putIfOwned(r,opToken);if(ok)this.d.publish?.(state(r));return ok}

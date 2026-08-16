@@ -785,19 +785,25 @@ TEST(RunOrchestratorTest, StandalonePurgeGetsPositiveGenerationAndUsesFullResetL
     EXPECT_EQ(o.snapshot().resetGeneration,generation);
 }
 
-TEST(RunOrchestratorTest, SubmittedLedgerAcceptsOnlyDurableExactRun)
+TEST(RunOrchestratorTest, SubmittedLedgerAcceptsDurableCurrentRunAndArchivedRuns)
 {
     FakeApi api;FakeStore store;FakeRun run;RunOrchestrator o(api,store,run);
     ASSERT_TRUE(o.start(request()));ASSERT_TRUE(o.finish(false));const auto id=o.snapshot().recordingId;
     EXPECT_FALSE(o.markLeaderboardSubmitted(id,"SCORED"));
     ASSERT_TRUE(o.beginSealedCapture(id));ASSERT_TRUE(o.acknowledgeSealedCapture(id));
-    EXPECT_FALSE(o.markLeaderboardSubmitted("other","SCORED"));
     EXPECT_FALSE(o.markLeaderboardSubmitted(id,"BAD"));
-    EXPECT_TRUE(o.markLeaderboardSubmitted(id,"INVALID"));EXPECT_EQ(store.submittedCalls,1);
+    // 과거(보관) 주행의 뒤늦은 제출 보고: 원장에만 기록되고 현재 주행의 주행 후
+    // 상태 전이는 일어나지 않는다. / A late report for an archived run writes
+    // the ledger only and never transitions the current run's post-run state.
+    EXPECT_TRUE(o.markLeaderboardSubmitted("other","SCORED"));
+    EXPECT_EQ(store.submittedCalls,1);
+    EXPECT_EQ(o.snapshot().postRun,PostRunState::CaptureDurable);
+    EXPECT_FALSE(o.markLeaderboardSubmitted("other","BAD"));
+    EXPECT_TRUE(o.markLeaderboardSubmitted(id,"INVALID"));EXPECT_EQ(store.submittedCalls,2);
     EXPECT_EQ(o.snapshot().postRun,PostRunState::Submitted);
     EXPECT_TRUE(o.acknowledgeSealedCapture(id));
     EXPECT_TRUE(o.markLeaderboardSubmitted(id,"INVALID"));
-    EXPECT_EQ(store.submittedCalls,1);
+    EXPECT_EQ(store.submittedCalls,2);
 }
 
 TEST(RunOrchestratorTest, ResetFailureKeepsCompletedRunAndCaptureInProgressRejectsReset)

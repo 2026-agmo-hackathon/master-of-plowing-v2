@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { buildSetupIntent, canRetryLeaderboard, effectiveSelectionAgeMs, formatBytes, isCurrentRunCaptureBlocking, isPrimaryLeaderboardRelevant, RunSetup, SELECTION_STALE_BUDGET_MS } from './Dashboard'
-import {buildResetIntent,buildSubmitIntent,ORCHESTRATION_POLL_MS,SIMULATOR_TICK_MS} from './useTelemetry'
+import { buildSetupIntent, canRetryLeaderboard, effectiveSelectionAgeMs, formatBytes, isCurrentRunCaptureBlocking, isPrimaryLeaderboardRelevant, RunSetup, SELECTION_STALE_BUDGET_MS, UnsubmittedRow, unsubmittedSubmitCaption, unsubmittedSubmitPath } from './Dashboard'
+import {buildResetIntent,buildSubmitIntent,mergeUnsubmittedRecords,ORCHESTRATION_POLL_MS,SIMULATOR_TICK_MS} from './useTelemetry'
 import type { LeaderboardState, OrchestrationState } from './types'
 
 const state: OrchestrationState={
@@ -236,5 +236,61 @@ describe('RunSetup',()=>{
     expect(formatBytes(5*1024*1024)).toBe('5.0 MiB')
     expect(formatBytes(Number.NaN)).toBe('—')
     expect(formatBytes(-1)).toBe('—')
+  })
+
+  // 회귀: 「모두 제거」의 드레인은 IndexedDB 행을 지우지 않고 failed_terminal
+  // 로 바꿔만 둔다. 병합이 그 상태를 거르지 않아 전체 삭제 뒤에도 목록이
+  // 영원히 되살아났다.
+  // Regression: the purge-all drain never deletes IndexedDB rows, it flips them
+  // to failed_terminal; the merge did not filter that state, so the list
+  // resurrected every purged record forever.
+  it('drops discarded outbox-only rows but keeps records whose CSV still exists',()=>{
+    const discarded={runId:'run-a',status:'failed_terminal' as const,teamName:'T',createdAt:'1',error:'discarded by run reset',retryAllowed:false,hasEnvelope:true}
+    const pending={runId:'run-b',status:'pending' as const,teamName:'T',createdAt:'2',retryAllowed:true,hasEnvelope:true}
+    expect(mergeUnsubmittedRecords([],[discarded,pending]).map(r=>r.runId)).toEqual(['run-b'])
+    // CSV 가 디스크에 실존하면 아웃박스가 종결이어도 실린다(주석으로만).
+    // A record whose CSV really exists still shows, terminally annotated.
+    const backendRow={runId:'run-a',teamName:'T',createdAt:'1',bytes:64,csvAvailable:true}
+    const merged=mergeUnsubmittedRecords([backendRow],[discarded,pending])
+    expect(merged.map(r=>r.runId)).toEqual(['run-a','run-b'])
+    expect(merged[0].outboxStatus).toBe('failed_terminal')
+    expect(merged[0].outboxHasEnvelope).toBe(true)
+    expect(merged[1].outboxRetryAllowed).toBe(true)
+    for(const terminal of ['submitted','invalid'] as const)
+      expect(mergeUnsubmittedRecords([],[{...pending,status:terminal}])).toEqual([])
+  })
+
+  // 봉인은 서버 소유 키로 현재 레코더 내용에만 걸린다(rec.enc). 과거 주행은
+  // 아웃박스에 봉인본이 남아 있을 때만 개별 제출이 가능하다.
+  // Sealing covers only the current recorder content with server-owned keys, so
+  // an archived run is individually submittable only via a stored envelope.
+  it('authorizes per-record submission only for the current run or a stored envelope',()=>{
+    const record={runId:'run-1',teamName:'T',createdAt:'1',bytes:64,csvAvailable:true}
+    const current={...state,finalization:'completed' as const,recordingId:'run-1'}
+    expect(unsubmittedSubmitPath(record,current)).toBe('current')
+    expect(unsubmittedSubmitPath(record,{...current,postRun:'capture_in_progress' as const})).toBeNull()
+    // 캡처가 끝난 현재 주행은 봉인본 재전송(outbox)이어야 한다 — begin_sealed_capture
+    // 재요청은 거부된다. / A captured current run must resubmit its envelope;
+    // a second begin_sealed_capture is refused.
+    expect(unsubmittedSubmitPath({...record,outboxHasEnvelope:true,outboxRetryAllowed:true},
+      {...current,postRun:'capture_durable' as const})).toBe('outbox')
+    expect(unsubmittedSubmitPath(record,{...current,postRun:'capture_durable' as const})).toBeNull()
+    expect(unsubmittedSubmitPath({...record,outboxHasEnvelope:true,outboxRetryAllowed:true},state)).toBe('outbox')
+    expect(unsubmittedSubmitPath({...record,outboxHasEnvelope:true,outboxRetryAllowed:false},state)).toBeNull()
+    expect(unsubmittedSubmitPath(record,state)).toBeNull()
+    expect(unsubmittedSubmitCaption(record,state)).toContain('봉인본 없음')
+    expect(unsubmittedSubmitCaption({...record,outboxStatus:'submitting' as const},state)).toContain('제출 진행 중')
+  })
+
+  it('renders a per-record submit button only when a submit path exists',()=>{
+    const submittable={runId:'run-1',teamName:'T',createdAt:'1',bytes:64,csvAvailable:true,outboxHasEnvelope:true,outboxRetryAllowed:true}
+    const onSubmit=vi.fn()
+    const html=renderToStaticMarkup(<UnsubmittedRow record={submittable} orchestration={state} onDownload={vi.fn()} onSubmit={onSubmit}/>)
+    expect(html).toContain('리더보드 제출')
+    expect(html).toContain('CSV 다운로드')
+    const dead={runId:'run-2',teamName:'T',createdAt:'1',bytes:64,csvAvailable:true}
+    const deadHtml=renderToStaticMarkup(<UnsubmittedRow record={dead} orchestration={state} onDownload={vi.fn()} onSubmit={onSubmit}/>)
+    expect(deadHtml).not.toContain('리더보드 제출')
+    expect(deadHtml).toContain('봉인본 없음')
   })
 })

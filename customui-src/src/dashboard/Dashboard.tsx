@@ -266,6 +266,17 @@ type RunSetupProps = {
 
 export function RunSetup({ orchestration: o, leaderboard, recordingDownload, link, runState, send, retryLeaderboard,submitLeaderboard,resetRun,purgeAllUnsubmitted,unsubmittedRecords=[],requestUnsubmittedRecords,requestError=null,dismissRequestError }: RunSetupProps) {
   const [recordsOpen,setRecordsOpen]=useState(false)
+  // 모달이 열려 있는 동안 목록을 산 채로 유지한다. 개별 제출의 진행(캡처 →
+  // 제출 → 완료)은 leaderboard 상태로만 관측되므로, 그 변화마다 목록을 다시
+  // 요청해야 방금 제출한 행이 목록에서 빠지는 것이 보인다. 요청은 백엔드의
+  // 로컬 디렉터리 나열이라 시뮬레이터 왕복을 만들지 않는다.
+  // Keep the list live while the modal is open: per-record submission progress
+  // is only observable through the leaderboard state, so each change re-requests
+  // the list — that is how a just-submitted row visibly disappears. The request
+  // is a local directory listing in the backend, no simulator round trips.
+  useEffect(()=>{
+    if(recordsOpen)requestUnsubmittedRecords?.()
+  },[recordsOpen,leaderboard,requestUnsubmittedRecords])
   const [teamName,setTeamName]=useState(()=>typeof localStorage==='undefined'
     ? o?.teamName ?? '' : localStorage.getItem('master_of_plow_teamName') ?? o?.teamName ?? '')
   const [mapId,setMapId]=useState(()=>o?.confirmedSetup?.mapId || o?.selection.mapId || '')
@@ -435,18 +446,19 @@ export function RunSetup({ orchestration: o, leaderboard, recordingDownload, lin
         onClick={()=>retryLeaderboard?.(leaderboard.runId)}>Retry leaderboard</Button>}
     </div>}
     <div className="run-setup-records">
-      <Button variant="outline" tone="neutral" size="sm" onClick={()=>{setRecordsOpen(true);requestUnsubmittedRecords?.()}}>
+      <Button variant="outline" tone="neutral" size="sm" onClick={()=>setRecordsOpen(true)}>
         미제출 기록 ({unsubmittedRecords.length})
       </Button>
     </div>
     <Popup
       open={recordsOpen}
       onClose={()=>setRecordsOpen(false)}
+      className="unsubmitted-popup"
       title="미제출 기록"
       content={
         <div className="unsubmitted-body">
           <Paragraph typography="xs" color={theme.textDim}>
-            제출이 끝나지 않은 주행 기록입니다. CSV 는 개별로 내려받을 수 있고, 제거는 전체 단위로만 가능합니다.
+            제출이 끝나지 않은 주행 기록입니다. 봉인본이 있는 기록은 개별 제출할 수 있고, 제거는 전체 단위로만 가능합니다.
           </Paragraph>
           {unsubmittedRecords.length===0
             ? <div className="unsubmitted-empty">
@@ -454,8 +466,9 @@ export function RunSetup({ orchestration: o, leaderboard, recordingDownload, lin
               </div>
             : <ul className="unsubmitted-list">
                 {unsubmittedRecords.map(r=>
-                  <UnsubmittedRow key={r.runId} record={r}
-                    onDownload={()=>send({kind:'get_recording',id:r.runId})}/>)}
+                  <UnsubmittedRow key={r.runId} record={r} orchestration={o}
+                    onDownload={()=>send({kind:'get_recording',id:r.runId})}
+                    onSubmit={path=>{if(path==='current')submitLeaderboard?.(r.runId);else retryLeaderboard?.(r.runId)}}/>)}
               </ul>}
         </div>
       }
@@ -498,12 +511,49 @@ export function formatBytes(bytes:number):string {
   return `${value.toFixed(1)} ${units[unit]}`
 }
 
-function UnsubmittedRow({record,onDownload}:{
+/** 개별 제출이 가능한 경로. 봉인은 서버 소유 키로 현재 레코더 내용에만 걸리므로
+ *  (rec.enc), 과거 주행은 아웃박스가 봉인본을 이미 들고 있을 때만 다시 보낼 수
+ *  있다 — 그 외의 과거 CSV 는 어떤 경로로도 제출이 불가능하다.
+ *  Which path can submit this record. Sealing uses server-owned keys and covers
+ *  only the current recorder content (rec.enc), so an archived run is
+ *  resubmittable only if the outbox already holds its envelope; any other
+ *  archived CSV cannot be submitted by any path. */
+export function unsubmittedSubmitPath(
+  record: NonNullable<RunSetupProps['unsubmittedRecords']>[number],
+  orchestration: RunSetupProps['orchestration'],
+): 'current'|'outbox'|null {
+  // 봉인본이 이미 있으면 그 경로가 우선이다: 캡처가 끝난 현재 주행에
+  // begin_sealed_capture 를 다시 보내면 백엔드가 거부한다(awaiting_action 이
+  // 아니므로). / A stored envelope wins: re-sending begin_sealed_capture for a
+  // run whose capture already finished is refused (postRun left awaiting_action).
+  if(record.outboxHasEnvelope&&record.outboxRetryAllowed)return 'outbox'
+  if(orchestration?.recordingId===record.runId
+    && orchestration.finalization==='completed'
+    && (orchestration.postRun===undefined
+      ||orchestration.postRun==='awaiting_action'))return 'current'
+  return null
+}
+
+export function unsubmittedSubmitCaption(
+  record: NonNullable<RunSetupProps['unsubmittedRecords']>[number],
+  orchestration: RunSetupProps['orchestration'],
+): string {
+  if(record.outboxStatus==='submitting')return '제출 진행 중…'
+  if(orchestration?.recordingId===record.runId
+    && orchestration.postRun==='capture_in_progress')return '봉인 캡처 진행 중…'
+  if(record.outboxHasEnvelope)return '종결된 기록 — 다시 제출할 수 없습니다'
+  return '봉인본 없음 — 이 기록은 제출할 수 없습니다'
+}
+
+export function UnsubmittedRow({record,orchestration,onDownload,onSubmit}:{
   record: NonNullable<RunSetupProps['unsubmittedRecords']>[number]
+  orchestration: RunSetupProps['orchestration']
   onDownload: () => void
+  onSubmit: (path:'current'|'outbox') => void
 }) {
   const status=record.outboxStatus ? OUTBOX_STATUS[record.outboxStatus] : undefined
   const detail=record.outboxError ?? record.error
+  const path=unsubmittedSubmitPath(record,orchestration)
   return (
     <li className="unsubmitted-row" style={{borderLeftColor: status?.color ?? theme.grid}}>
       <div className="unsubmitted-row-head">
@@ -520,10 +570,13 @@ function UnsubmittedRow({record,onDownload}:{
         <Paragraph typography="2xs" color={theme.textDim}>{formatBytes(record.bytes)}</Paragraph>
       </div>
       {detail && <Paragraph typography="2xs" color={theme.bad}>{detail}</Paragraph>}
-      {record.csvAvailable &&
-        <div className="unsubmitted-row-action">
-          <Button variant="ghost" tone="neutral" size="sm" onClick={onDownload}>CSV 다운로드</Button>
-        </div>}
+      <div className="unsubmitted-row-action">
+        {path
+          ? <Button variant="solid" tone="brand" size="sm" onClick={()=>onSubmit(path)}>리더보드 제출</Button>
+          : <Paragraph typography="2xs" color={theme.textDim}>{unsubmittedSubmitCaption(record,orchestration)}</Paragraph>}
+        {record.csvAvailable &&
+          <Button variant="ghost" tone="neutral" size="sm" onClick={onDownload}>CSV 다운로드</Button>}
+      </div>
     </li>
   )
 }

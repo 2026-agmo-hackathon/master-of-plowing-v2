@@ -48,6 +48,23 @@
    여기서는 본문 목록만 다루고, 색은 전부 ADS 토큰으로 둔다(하드코딩 hex 금지).
    Unsubmitted-records modal: the ADS Popup owns the shell (dimmer, radius,
    footer); this styles only the body list, using ADS tokens exclusively. */
+
+/* ADS Popup 은 흰 배경(--ads-color-white)에 어두운 제목이 고정이라 다크 관제
+   화면 위에서 혼자 눈부시고, 다크 토큰으로 칠한 본문 행과도 충돌했다. Popup 이
+   받는 className 이 .ads-popup 요소에 붙으므로 표면·테두리·제목만 카드와 같은
+   토큰으로 덮는다. 푸터의 ADS 버튼은 다크에서도 그대로 성립한다.
+   The ADS Popup hardcodes a white surface with a dark title, which glared on
+   the dark ops screen and clashed with the dark-token body rows. Popup's
+   className lands on the .ads-popup element, so only the surface, border and
+   title are overridden with the same tokens the cards use; the ADS footer
+   buttons already hold up on dark. */
+.ads-popup.unsubmitted-popup {
+  background-color: var(--ads-color-grey-900);
+  border: 1px solid var(--ads-color-grey-800);
+}
+.unsubmitted-popup .ads-popup-title {
+  color: var(--ads-color-text-inverse);
+}
 .unsubmitted-body {
   display: flex;
   flex-direction: column;
@@ -106,7 +123,9 @@
 
 .unsubmitted-row-action {
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin-top: 2px;
 }
 
