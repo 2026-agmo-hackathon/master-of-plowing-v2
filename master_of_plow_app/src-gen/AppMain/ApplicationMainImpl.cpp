@@ -56,7 +56,8 @@
 #include <nevonex/cloud/Cloud.hpp>
 
 /*PROTECTED REGION ID(ApplicationMainImpl_Headers) ENABLED START*/
-
+#include "RddfLoader.hpp"
+#include <cstdlib>
 /*PROTECTED REGION END*/
 
 using namespace ::ecore;
@@ -500,11 +501,22 @@ void ApplicationMain::addCloudDownloadListener()
     cloudDownloadListener->setMainController(getMainController());
     Cloud::getInstance()->addPropertyChangeListener(cloudDownloadListener);
     /*PROTECTED REGION ID(AppMainImpl_addCloudDownloadListener) ENABLED START*/
-    // RddfStagingManager 주입이 있던 자리입니다. handleFile()이 도착한 .rddf를
-    // 곧바로 적재하므로 더 이상 필요하지 않습니다.
+    // RDDF 는 플랫폼의 handleFile 로만 도착하고, 앱이 재시작되면 그 전달은
+    // 반복되지 않는다 — 파일은 /app/in/rf/ 에 그대로 남아 있는데도 앱은
+    // waypointCount 0 으로 떠서 모든 Start 가 거절됐고, 재시작마다 RDDF 를
+    // 다시 업로드해야 했다. 부팅 때 남아 있는 최신 파일을 되살린다.
+    // (신규 설치는 rf/ 가 비어 있으므로 아무 일도 하지 않는다.)
     //
-    // The RddfStagingManager injection was here; handleFile() now loads an
-    // arriving .rddf directly, so there is nothing left to inject.
+    // An RDDF arrives only through the platform's handleFile, and an app
+    // restart never repeats that delivery — the file stayed visible in
+    // /app/in/rf/ while the app came up with waypointCount 0, refusing every
+    // Start until the RDDF was uploaded again. Revive the newest file at
+    // boot; a fresh install has an empty rf/ and nothing happens.
+    {
+        const char* rddfDir = std::getenv("SEAMOS_RDDF_DIR");
+        (void)::AppMain::RddfLoader::loadNewestFromDirectory(
+                rddfDir ? rddfDir : "/app/in/rf", *getMainController());
+    }
     /*PROTECTED REGION END*/
 }
 

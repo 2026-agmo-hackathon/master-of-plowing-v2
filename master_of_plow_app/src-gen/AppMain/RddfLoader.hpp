@@ -58,6 +58,23 @@ public:
      */
     static bool loadFromFile(const std::string& filePath,
                              MainController& controller);
+
+    /**
+     * 디렉터리에서 가장 최근에 쓰인 .rddf 를 찾아 적재합니다. RDDF 는 평소
+     * 플랫폼의 handleFile 로만 도착하는데, 앱이 재시작되면 그 전달은 다시
+     * 오지 않고 파일만 /app/in/rf/ 에 남습니다. 부팅 때 이 함수로 되살려야
+     * 재시작마다 RDDF 를 다시 업로드하는 일이 없어집니다. 파일이 없으면
+     * 조용히 false 를 돌려줍니다 (신규 설치 직후의 정상 상태).
+     *
+     * Loads the most recently written .rddf in the directory. RDDFs normally
+     * arrive only through the platform's handleFile callback; after an app
+     * restart that delivery never repeats while the file itself is still in
+     * /app/in/rf/. Calling this at boot revives it so a restart no longer
+     * demands a fresh upload. Returns false quietly when the directory holds
+     * no file (the normal state right after an install).
+     */
+    static bool loadNewestFromDirectory(const std::string& directory,
+                                        MainController& controller);
 };
 
 } // namespace AppMain

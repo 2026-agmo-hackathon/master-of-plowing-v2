@@ -183,10 +183,19 @@ public:
     static constexpr long long MAX_CATALOG_AGE_MS = 10000;
     static constexpr std::size_t MAX_RECORDING_BYTES = 64u * 1024u * 1024u;
 
+    // notify 는 스냅샷 밖의 지속 알림 채널이다. 스냅샷 error 는 2.5 초 주기
+    // 새로고침이 지우므로, 재시도가 불가능한 종결 실패(예: 기록 유실)는 이
+    // 채널로도 내보내 사용자가 닫을 때까지 화면에 남긴다.
+    //
+    // notify is the durable notice channel outside the snapshot. The snapshot
+    // error field is erased by the 2.5 s refresh, so terminal, non-retryable
+    // failures (e.g. a lost recording) are also reported here, where the UI
+    // keeps them until dismissed.
     RunOrchestrator(ISimulatorApi& api, IRecordingStore& store,
                     IRunControl& runControl,
                     std::function<void(const Snapshot&)> publish = {},
-                    std::function<void(const std::string&,const std::string&)> finalized = {});
+                    std::function<void(const std::string&,const std::string&)> finalized = {},
+                    std::function<void(const std::string&)> notify = {});
 
     bool refresh();
     void noteSetupIntent(const StartRequest& request, unsigned long long generation);
@@ -238,12 +247,20 @@ public:
                                               const StartRequest& expected);
 
 private:
+    // 아카이브 실패는 두 종류다. Retryable 은 다시 Finish 하면 풀릴 수 있는
+    // 실패이고, Lost 는 시뮬레이터에 기록 자체가 없다는 확답(HTTP 404)이라
+    // 어떤 재시도로도 복구되지 않는다.
+    //
+    // Archive failures come in two kinds: Retryable may clear on another
+    // Finish; Lost is the simulator's definite answer (HTTP 404) that no
+    // recording exists, which no retry can ever recover.
+    enum class PersistOutcome { Persisted, Retryable, Lost };
     static const CatalogItem* find(const std::vector<CatalogItem>& items,
                                    const std::string& id);
     static bool fresh(const Selection& selection);
     void compensate();
     void setPhase(Phase phase, const std::string& error = {});
-    bool persistRecording();
+    PersistOutcome persistRecording();
     bool cancelled(const char* stage);
     bool shuttingDown() const;
     bool finalizationFailed(const std::string& error);
@@ -256,8 +273,13 @@ private:
     IRunControl& runControl_;
     std::function<void(const Snapshot&)> publish_;
     std::function<void(const std::string&,const std::string&)> finalized_;
+    std::function<void(const std::string&)> notify_;
     mutable std::mutex mutex_;
     Snapshot snapshot_;
+    // fcal.log 로 나가는 전이 로그의 중복 억제 상태 (mutex_ 로 보호).
+    // Dedup state for the transition log written to fcal.log (guarded by mutex_).
+    Phase loggedPhase_ = Phase::Idle;
+    std::string loggedError_;
     FinalizationState finalizationState_ = FinalizationState::Idle;
     unsigned long long runGeneration_ = 0;
     unsigned long long finalizationGeneration_ = 0;

@@ -215,7 +215,14 @@ TEST(RunOrchestratorTest, StartPreflightReportsFirstFailedPredicateWithoutSideEf
             [](FakeApi& a,FakeRun&){a.selected.snapshotAgeMs=RunOrchestrator::MAX_SNAPSHOT_AGE_MS+1;}},
         {"stopped=false",[](FakeApi& a,FakeRun&){a.selected.stopped=false;}},
         {"reactRunning=true",[](FakeApi& a,FakeRun&){a.selected.reactRunning=true;}},
-        {"selected IDs mismatch",[](FakeApi& a,FakeRun&){a.selected.mapId="map-b";}},
+        // 선택이 흘러내린 경우 Start 는 이제 직접 재정렬을 시도한다. 재정렬이
+        // 성공하는 경로는 별도 테스트가 고정하고, 여기서는 적용 자체가 계속
+        // 실패할 때 부작용 없이 거절되는 것을 본다.
+        // A drifted selection is now realigned by Start itself; the success
+        // path is pinned by its own test. This case pins that a persistently
+        // failing apply is refused without side effects.
+        {"start setup alignment: map selection",
+            [](FakeApi& a,FakeRun&){a.selected.mapId="map-b";a.failStage="map";}},
         {"selected map is absent",[](FakeApi& a,FakeRun&){a.data.maps.clear();}},
         {"selected tractor is absent",[](FakeApi& a,FakeRun&){a.data.tractors.clear();}},
         {"tractor geometry is invalid",[](FakeApi& a,FakeRun&){a.data.tractors.front().geometry.wheelbaseM=0.0;}},
@@ -946,6 +953,54 @@ TEST(RunOrchestratorTest, FinishTreatsAnAbsentRecorderAsAConfirmedStop)
     EXPECT_EQ(store.calls,1);
 }
 
+// 주행 중 시뮬레이터 페이지가 다시 로드되면 레코더 버퍼가 사라지고, 그 뒤의
+// 모든 기록 조회는 404 다. 예전에는 이것이 RetryableError 로 남아 Finish 재시도가
+// 영원히 같은 404 를 받았고 앱 재시작만이 출구였다. 이제는 종결이다: 다음 Start
+// 가 앱 재시작 없이 허용되고, 지속 알림 채널로 이유가 나간다.
+//
+// A mid-run simulator page reload destroys the recorder buffer and every read
+// after that is a 404. This used to sit in RetryableError with every Finish
+// retry reading the same 404 forever, app restart being the only exit. It is
+// terminal now: the next Start is admitted without a restart and the reason
+// goes out on the durable notice channel.
+TEST(RunOrchestratorTest, VanishedRecordingIsTerminalAndFreesTheNextStart)
+{
+    struct LostApi : FakeApi {
+        bool lost=false;
+        ApiResult recordingState(RecorderState& out) override {
+            if(lost) return noRecording(out);
+            return FakeApi::recordingState(out);
+        }
+        ApiResult recording(Recording& out) override {
+            if(lost) return {false,404,"no recording yet"};
+            return FakeApi::recording(out);
+        }
+    } api;
+    FakeStore store; FakeRun run;
+    std::vector<std::string> notices;
+    RunOrchestrator o(api,store,run,{},{},
+        [&](const std::string& notice){notices.push_back(notice);});
+    ASSERT_TRUE(o.start(request()));
+    api.lost=true;
+    EXPECT_FALSE(o.finish(false));
+    const auto snap=o.snapshot();
+    EXPECT_EQ(snap.finalization,FinalizationState::Idle);
+    EXPECT_EQ(snap.postRun,PostRunState::None);
+    EXPECT_TRUE(snap.recordingId.empty());
+    EXPECT_NE(snap.error.find("recorder no longer holds"),std::string::npos)
+        << snap.error;
+    EXPECT_EQ(store.calls,0);
+    ASSERT_EQ(notices.size(),1u);
+    EXPECT_NE(notices.front().find("no retry can recover"),std::string::npos);
+    EXPECT_GE(api.engineOff,1);
+    // 앱 재시작 없이 다음 주행이 시작돼야 한다.
+    // The next run must start without an app restart.
+    api.lost=false;
+    std::string refusal;
+    EXPECT_TRUE(o.start(request(),&refusal)) << refusal;
+    EXPECT_EQ(o.snapshot().phase,Phase::Running);
+}
+
 TEST(RunOrchestratorTest, PhysicalStopTimeoutIsRetryableWithoutArchiveOrFinalEvent)
 {
     struct StopGateApi : FakeApi {
@@ -1067,6 +1122,30 @@ TEST(RunOrchestratorTest, StartStillRefusedWhenTheSimulatorDisagrees)
     std::string refusal;
     EXPECT_FALSE(o.start(elsewhere,&refusal));
     EXPECT_FALSE(refusal.empty());
+}
+
+// 시뮬레이터 페이지를 다시 열면 작업기 선택이 해제된다. 예전에는 그 상태의
+// Start 가 "selected IDs mismatch" 로 거절됐고, 화면에는 빠져나갈 안내가 없어
+// 드롭다운을 두 번 토글해야만 풀렸다. Start 요청이 곧 사용자가 명명한 설정이므로
+// Start 가 직접 재정렬한다.
+//
+// Reopening the simulator page drops the implement selection. Start used to
+// refuse that state with "selected IDs mismatch" and nothing on screen said the
+// way out was toggling a dropdown twice. The Start request names the exact
+// setup, so Start realigns it itself.
+TEST(RunOrchestratorTest, StartRealignsDriftedSimulatorSelectionInsteadOfRefusing)
+{
+    FakeApi api; FakeStore store; FakeRun run;
+    api.selected.implementId="none";
+    RunOrchestrator o(api,store,run);
+    std::string refusal;
+    EXPECT_TRUE(o.start(request(),&refusal)) << refusal;
+    EXPECT_EQ(api.implementCalls,1);
+    EXPECT_EQ(api.selected.implementId,"plow-a");
+    const auto snap=o.snapshot();
+    EXPECT_EQ(snap.phase,Phase::Running);
+    EXPECT_EQ(snap.confirmedSetup.implementId,"plow-a");
+    EXPECT_EQ(snap.desiredSetup.implementId,"plow-a");
 }
 
 TEST(RunOrchestratorTest, RecorderStateFailureCanBeRetriedToOneSuccessfulArchive)
@@ -1503,6 +1582,35 @@ TEST(RunOrchestratorTest, RefreshRejectsAStaleSelectionSnapshot)
     api.selected.snapshotAgeMs=RunOrchestrator::MAX_SNAPSHOT_AGE_MS+1;
     EXPECT_FALSE(o.refresh());
     EXPECT_EQ(o.snapshot().phase,Phase::Failed);
+}
+
+// 종결이 엔진을 끄면 시뮬레이터는 물리 루프를 멈추고 스냅샷을 띄엄띄엄만
+// 발행한다. 그 상태의 카탈로그 유실은 기대된 것이므로, 완주·제출 대기 화면에
+// "maps catalog is not live" 오류가 깜빡여서는 안 된다. 주행 전의 유실은
+// 종전대로 요란하게 실패한다.
+//
+// Finalization cuts the engine, the simulator stops its physics loop and
+// publishes snapshots only sporadically. A catalog outage in that state is
+// expected, so the screen of a completed run awaiting submit/reset must not
+// blink "maps catalog is not live". A pre-run outage still fails loudly.
+TEST(RunOrchestratorTest, PostRunRefreshOutageStaysQuietWhileAwaitingAction)
+{
+    FakeApi api; FakeStore store; FakeRun run; RunOrchestrator o(api,store,run);
+    ASSERT_TRUE(o.start(request()));
+    ASSERT_TRUE(o.finish(false));
+    ASSERT_EQ(o.snapshot().postRun,PostRunState::AwaitingAction);
+    api.failStage="catalog";
+    EXPECT_FALSE(o.refresh());
+    const auto snap=o.snapshot();
+    EXPECT_EQ(snap.phase,Phase::Idle);
+    EXPECT_TRUE(snap.error.empty()) << snap.error;
+    EXPECT_EQ(snap.postRun,PostRunState::AwaitingAction);
+    EXPECT_EQ(snap.finalization,FinalizationState::Completed);
+
+    FakeApi preRun; preRun.failStage="catalog";
+    FakeStore store2; FakeRun run2; RunOrchestrator idle(preRun,store2,run2);
+    EXPECT_FALSE(idle.refresh());
+    EXPECT_EQ(idle.snapshot().phase,Phase::Failed);
 }
 
 TEST(RunOrchestratorTest, RejectsStaleOrWrongContentTypeRecording)

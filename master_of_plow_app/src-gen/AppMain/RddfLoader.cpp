@@ -15,6 +15,7 @@
 #include <AppMain/tracking/TrackerFactory.hpp>
 #include <AppMain/tracking/TrackerTypes.hpp>
 
+#include <filesystem>
 #include <iostream>
 #include <vector>
 
@@ -118,6 +119,46 @@ bool RddfLoader::loadFromFile(const std::string& filePath,
     } catch (...)
     {
         std::cerr << "[RddfLoader] unknown exception\n";
+        return false;
+    }
+}
+
+bool RddfLoader::loadNewestFromDirectory(const std::string& directory,
+                                         MainController& controller)
+{
+    try
+    {
+        namespace fs = std::filesystem;
+        fs::path newest;
+        fs::file_time_type newestTime{};
+        std::error_code ec;
+        for (const auto& entry : fs::directory_iterator(directory, ec))
+        {
+            if (!entry.is_regular_file() || entry.path().extension() != ".rddf")
+            {
+                continue;
+            }
+            const auto written = entry.last_write_time(ec);
+            if (ec)
+            {
+                continue;
+            }
+            if (newest.empty() || written > newestTime)
+            {
+                newest = entry.path();
+                newestTime = written;
+            }
+        }
+        if (newest.empty())
+        {
+            return false;
+        }
+        std::cerr << "[RddfLoader] startup rescan: reloading " << newest.string()
+                << "\n";
+        return loadFromFile(newest.string(), controller);
+    } catch (const std::exception& e)
+    {
+        std::cerr << "[RddfLoader] startup rescan failed: " << e.what() << "\n";
         return false;
     }
 }

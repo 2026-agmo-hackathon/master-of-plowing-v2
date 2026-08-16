@@ -125,6 +125,13 @@ void MainController::ensureOrchestrator()
             Json::Value event;event["kind"]="run_finalized";
             event["teamName"]=team;event["runId"]=runId;
             if(auto ws=getWebSocketEndPoint())ws->publishMessage(event);
+        },[](const std::string& notice){
+            // 종결적(재시도 불가) 실패 알림. 스냅샷 error 는 2.5 초 새로고침이
+            // 지우므로, 사용자가 닫을 때까지 남는 채널로 내보낸다.
+            // Terminal (non-retryable) failure notices. The snapshot error is
+            // erased by the 2.5 s refresh, so they go out on the channel the
+            // UI keeps until dismissed.
+            publishOrchestrationRejection(notice);
         });
 }
 
