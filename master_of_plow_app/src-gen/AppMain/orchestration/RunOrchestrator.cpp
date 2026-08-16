@@ -176,10 +176,10 @@ void RunOrchestrator::setPhase(Phase phase, const std::string& error)
                          phase == Phase::ApplyingSetup || phase == Phase::Finishing;
         snapshot_.error = error;
         copy = publishable(snapshot_);
-        // Refreshing 은 2.5 초마다 지나가는 통과 상태라 로그에서 뺀다. 그 외의
-        // 전이는 (phase, error) 가 바뀔 때 한 번만 남긴다.
-        // Refreshing passes through every 2.5 s and is excluded; every other
-        // transition is logged once per (phase, error) change.
+        // Refreshing 은 리셋 경로만 지나는 통과 상태라 로그에서 뺀다(리셋은
+        // 자체 로그가 있다). 그 외 전이는 (phase, error) 변화마다 한 번 남긴다.
+        // Refreshing is now only a reset-path pass-through with its own log
+        // lines; every other transition logs once per (phase, error) change.
         if(phase!=Phase::Refreshing
             && (phase!=loggedPhase_ || error!=loggedError_)) {
             loggedPhase_=phase; loggedError_=error;
@@ -215,7 +215,14 @@ bool RunOrchestrator::shuttingDown() const
 bool RunOrchestrator::refresh()
 {
     if(shuttingDown()) return false;
-    setPhase(Phase::Refreshing);
+    // 읽기 전용 통과 상태는 방송하지 않는다. 매 2.5초 폴마다 Refreshing/busy
+    // 프레임이 나가면 UI 의 편집 게이트가 폴마다 퍼덕여 설정 셀렉트가 회색으로
+    // 깜빡인다 (실측: 폴 한 번에 idle→refreshing→idle 3연발). 아래에서 정착된
+    // 스냅샷만 발행한다.
+    // Do not broadcast the read-only pass-through: a Refreshing/busy frame on
+    // every 2.5 s poll flaps the UI's edit gate and visibly blinks the setup
+    // selects (measured: an idle→refreshing→idle triple per poll). Only the
+    // settled snapshot below is published.
     Catalog catalog;
     const ApiResult result = api_.catalog(catalog);
     if (!result.ok || !fresh(catalog.selection)) {

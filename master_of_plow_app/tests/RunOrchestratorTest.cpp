@@ -1613,6 +1613,27 @@ TEST(RunOrchestratorTest, PostRunRefreshOutageStaysQuietWhileAwaitingAction)
     EXPECT_EQ(idle.snapshot().phase,Phase::Failed);
 }
 
+// UI 는 2.5초마다 폴링하고, refresh 가 Refreshing/busy 통과 프레임을 방송하면
+// 편집 게이트가 폴마다 잠겼다 풀리며 설정 셀렉트 박스가 회색으로 깜빡인다.
+// 읽기 전용 갱신은 정착된 스냅샷만 발행해야 한다.
+//
+// The UI polls every 2.5 s; broadcasting the Refreshing/busy pass-through made
+// the edit gate lock and unlock on every poll, visibly blinking the setup
+// selects. A read-only refresh must publish settled snapshots only.
+TEST(RunOrchestratorTest, RefreshNeverBroadcastsABusyPassThroughFrame)
+{
+    FakeApi api; FakeStore store; FakeRun run;
+    std::vector<Snapshot> frames;
+    RunOrchestrator o(api,store,run,
+        [&](const Snapshot& s){frames.push_back(s);});
+    ASSERT_TRUE(o.refresh());
+    ASSERT_FALSE(frames.empty());
+    for(const auto& frame:frames) {
+        EXPECT_FALSE(frame.busy);
+        EXPECT_NE(frame.phase,Phase::Refreshing);
+    }
+}
+
 TEST(RunOrchestratorTest, RejectsStaleOrWrongContentTypeRecording)
 {
     Recording r{"x", "application/json", "attachment; filename=x", true, false, 10};
