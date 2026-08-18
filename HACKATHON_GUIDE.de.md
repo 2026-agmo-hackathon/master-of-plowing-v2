@@ -383,6 +383,10 @@ MIN_TURN_R  = 4.9      # z. B. gross JD 6155M
 MAX_SPACING = 5.0      # max. Abstand benachbarter Waypoints (darueber wird die Datei abgelehnt)
 
 # --- Parameter ---
+# FIELD_W/FIELD_H sind ein frei erfundenes Demo-Rechteck - NICHT die echten
+#   Kartenwerte. Ersetzen Sie sie durch die workArea-Polygonkoordinaten aus
+#   docs/hackathon-2026/maps.md (M2/M3 sind keine Rechtecke und lassen sich
+#   mit diesen zwei Werten gar nicht darstellen).
 FIELD_W = 30.0     # Feldbreite, Ost-West (m)
 FIELD_H = 50.0     # Feldlaenge, Nord-Sued (m)
 SWATH   = 4.0      # Spurabstand = Pflugbreite (m)

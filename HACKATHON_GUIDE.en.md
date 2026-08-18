@@ -380,6 +380,10 @@ MIN_TURN_R  = 4.9      # e.g. large JD 6155M
 MAX_SPACING = 5.0      # max spacing between waypoints (over this the file is rejected)
 
 # --- Parameters ---
+# FIELD_W/FIELD_H are a made-up demo rectangle - NOT the real map values.
+#   Replace them with the actual workArea polygon coordinates from
+#   docs/hackathon-2026/maps.md (M2/M3 are not rectangles and cannot be
+#   expressed by these two values at all).
 FIELD_W = 30.0     # field width, east-west (m)
 FIELD_H = 50.0     # field length, north-south (m)
 SWATH   = 4.0      # lane spacing = plow width (m)
