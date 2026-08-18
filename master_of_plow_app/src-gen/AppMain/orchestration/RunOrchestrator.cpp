@@ -165,6 +165,11 @@ bool RunOrchestrator::vehicleAtRestSampleAcceptable(
         && selection.implementId==expected.implementId;
 }
 
+bool RunOrchestrator::simulatorLoopDown(long long snapshotAgeMs)
+{
+    return snapshotAgeMs>=SIMULATOR_DOWN_AGE_MS;
+}
+
 void RunOrchestrator::setPhase(Phase phase, const std::string& error)
 {
     Snapshot copy;
@@ -227,12 +232,35 @@ bool RunOrchestrator::refresh()
     const ApiResult result = api_.catalog(catalog);
     if (!result.ok || !fresh(catalog.selection)) {
         bool postRunQuiet=false;
+        bool debouncing=false;
         {
             std::lock_guard<std::mutex> lock(mutex_);
             postRunQuiet=snapshot_.postRun!=PostRunState::None
                 || finalizationState_==FinalizationState::Completed;
+            // ┌─ 한국어 ────────────────────────────────────────┐
+            // 서버에 닿지도 못한 요청은 지금 곧장 말해야 하는 사실이다.
+            // 디바운스는 시뮬레이터가 답을 주기는 한 모든 경우를 덮는다:
+            // 200 안의 스냅샷이 낡은 경우, 그리고 클라이언트가 실패로 옮겨
+            // 담는 "not live" / "catalog is stale" 판정(그래서
+            // simulatorQuiet 이 필요하다). 실측 2026-08-18: 두 번째를 빼놨더니
+            // 9 분 주행 내내 배너가 2~5 초마다 running -> failed -> running
+            // 으로 깜빡였다.
+            // └────────────────────────────────────────────┘
+            // ┌─ English ───────────────────────────────────────┐
+            // A catalog request that never reached the server is a fact to
+            // report now. The debounce covers every answer the simulator did
+            // give: a stale snapshot inside a 200, and the client's own
+            // "not live" / "catalog is stale" verdicts, which are 200 responses
+            // the client folds into failures (hence result.simulatorQuiet).
+            // Measured 2026-08-18: without that second case the banner flapped
+            // running -> failed -> running every two to five seconds for the
+            // whole of a nine-minute run.
+            // └────────────────────────────────────────────┘
+            if(result.ok || result.simulatorQuiet)
+                debouncing=++consecutiveStaleCatalogPolls_
+                    <STALE_CATALOG_POLLS_BEFORE_FAILED;
         }
-        if(!postRunQuiet) {
+        if(!postRunQuiet && !debouncing) {
             setPhase(Phase::Failed, result.ok ? "simulator catalog is stale" : result.error);
             return false;
         }
@@ -266,6 +294,7 @@ bool RunOrchestrator::refresh()
     }
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        consecutiveStaleCatalogPolls_=0;
         snapshot_.catalog = std::move(catalog);
         snapshot_.selectionObservedAt=std::chrono::steady_clock::now();
         const Selection& selected=snapshot_.catalog.selection;
@@ -802,10 +831,30 @@ bool RunOrchestrator::cancelled(const char* stage)
 
 bool RunOrchestrator::recAcceptable(const Recording& rec, std::string& reason)
 {
-    if (!rec.live || rec.snapshotAgeMs < 0 || rec.snapshotAgeMs > MAX_SNAPSHOT_AGE_MS) {
+    // 나이는 페이지의 발행 최신성일 뿐, 서버가 들고 있는 CSV 의 완결성과는
+    // 무관하다. 루프가 죽은 것이 증명되면 그 바이트는 더 늘어날 수 없으므로
+    // 최종본이다. 예전에는 여기서 "recording snapshot is stale" 로 되돌아가
+    // 이미 정지시킨 레코더를 아카이브하지 못했다.
+    //
+    // The age reports the page's publish recency, not the integrity of the CSV
+    // the server holds. Once the loop is provably down those bytes can no
+    // longer grow, so they are final. This used to bounce back as "recording
+    // snapshot is stale" and leave an already-stopped recorder unarchived.
+    const bool freshSnapshot = rec.live && rec.snapshotAgeMs >= 0
+        && rec.snapshotAgeMs <= MAX_SNAPSHOT_AGE_MS;
+    const bool loopDown = simulatorLoopDown(rec.snapshotAgeMs);
+    if (!freshSnapshot && !loopDown) {
         reason = "recording snapshot is stale"; return false;
     }
-    if (rec.recording) { reason = "recorder still running"; return false; }
+    // 같은 이유로 recording 플래그도 루프가 죽었으면 믿을 수 없다. 얼어붙은
+    // true 하나 때문에 이미 정지시킨 기록을 "recorder still running" 으로
+    // 되돌려 보관에 실패하던 자리다. 서 있는 루프는 행을 더할 수 없다.
+    //
+    // For the same reason the recording flag is worthless once the loop is
+    // down. One frozen true used to bounce an already-stopped recording back as
+    // "recorder still running" and fail the archive. A stopped loop cannot
+    // append a row.
+    if (rec.recording && !loopDown) { reason = "recorder still running"; return false; }
     if (rec.bytes.empty() || rec.bytes.size() > MAX_RECORDING_BYTES) {
         reason = "recording size is invalid"; return false;
     }
@@ -898,7 +947,13 @@ bool RunOrchestrator::confirmVehicleAtRest(bool duringShutdown)
         expected=snapshot_.confirmedSetup;
     }
     int consecutiveStopped=0;
+    int consecutiveLoopDown=0;
     constexpr int REQUIRED_STOPPED_SAMPLES=3;
+    // 루프 사망은 나이 자체가 이미 15 초짜리 증거다. 연속 요구는 한 번 튄 값을
+    // 거르는 용도이므로 짧게 둔다.
+    // The age alone is already fifteen seconds of evidence that the loop is
+    // down; the consecutive requirement only filters a single garbage reading.
+    constexpr int REQUIRED_LOOP_DOWN_SAMPLES=5;
     // 지령을 놓은 차량이 굴러 멈추기까지 기다린다. 예전 3 초 예산은 작업기를
     // 끌고 4.5 km/h 로 달리던 차량에게는 감속이 끝나기 전에 소진됐다.
     // Give the released vehicle time to roll to a stop. The former 3 s budget
@@ -913,6 +968,34 @@ bool RunOrchestrator::confirmVehicleAtRest(bool duringShutdown)
             && vehicleAtRestSampleAcceptable(selection,expected)
             ? consecutiveStopped+1 : 0;
         if(consecutiveStopped>=REQUIRED_STOPPED_SAMPLES) return true;
+        // ┌─ 한국어 ────────────────────────────────────────┐
+        // 시뮬레이터 페이지가 죽으면 신선한 샘플은 영영 오지 않는다. 예전에는
+        // 여기서 15 초를 채우고 "physical stop confirmation timed out" 으로
+        // 끝났고, 그 뒤 단계인 레코더 정지에 아예 도달하지 못해 주행이 끝난
+        // 뒤에도 기록이 계속 돌았다. API 서버가 응답했는데 그 응답이 루프가
+        // 서 있다고 말한다면, 서 있는 루프는 차량을 움직일 수 없다 — 그것을
+        // 정지 확인으로 받고 남은 종결 단계(레코더 정지, 아카이브)를 진행한다.
+        // 이것은 confirmEngineOff 가 이미 쓰는 논리와 같다.
+        // └────────────────────────────────────────────┘
+        // ┌─ English ───────────────────────────────────────┐
+        // A dead simulator page never delivers another fresh sample. This loop
+        // used to burn its 15 s and fail with "physical stop confirmation timed
+        // out", never reaching the recorder stop that follows, which left the
+        // recording running long after the run was over. If the API server does
+        // answer and its answer says the loop is down, then a stopped loop
+        // cannot be moving the vehicle - take that as confirmation and carry on
+        // with the remaining steps (stop the recorder, archive). This is the
+        // same reasoning confirmEngineOff already relies on.
+        // └────────────────────────────────────────────┘
+        consecutiveLoopDown=state.ok && simulatorLoopDown(selection.snapshotAgeMs)
+            ? consecutiveLoopDown+1 : 0;
+        if(consecutiveLoopDown>=REQUIRED_LOOP_DOWN_SAMPLES) {
+            logLine("vehicle stop unobservable: simulator snapshot is "
+                +std::to_string(selection.snapshotAgeMs)
+                +" ms old, so the physics loop is down and cannot move the "
+                "vehicle; continuing finalization");
+            return true;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     return finalizationFailed(
@@ -1032,11 +1115,32 @@ bool RunOrchestrator::finishImpl(bool, bool duringShutdown)
     if (!stop.ok && stop.status != 409)
         return finalizationFailed("recording stop: "+stop.error);
     RecorderState recorder;
-    bool stoppedConfirmed=false;
+    // ┌─ 한국어 ────────────────────────────────────────┐
+    // 409 {"error":"not recording"} 는 API 서버 자신의 확답이다: 지금 돌고 있는
+    // 기록이 없다. 예전에는 이것을 "무해하니 무시" 정도로만 다뤘고, 확인은
+    // 아래 헤더에만 맡겼다. 그런데 헤더는 서버 상태가 아니다 (아래 참고) —
+    // 페이지가 얼면 서버가 409 로 "안 돌고 있다" 고 답하는 동안 헤더는
+    // X-Rec-Recording: true 를 계속 내놓는다. 실측된 이 모순 때문에 종결이
+    // stop 을 30 번 재발행하고 "recording stop confirmation timed out" 으로
+    // 끝났다. 답을 들었으면 그것이 확인이다.
+    // └────────────────────────────────────────────┘
+    // ┌─ English ───────────────────────────────────────┐
+    // A 409 {"error":"not recording"} is the API server's own answer: nothing is
+    // recording. This used to be merely tolerated as harmless, leaving the
+    // confirmation to the headers below - but those headers are not server state
+    // (see below). With the page frozen the server answers 409 "not recording"
+    // while the header keeps reporting X-Rec-Recording: true. That measured
+    // contradiction made finalization re-issue the stop thirty times and end in
+    // "recording stop confirmation timed out". An answer received is a
+    // confirmation.
+    // └────────────────────────────────────────────┘
+    bool stoppedConfirmed=stop.status==409;
     bool absentNow=false;
     int consecutiveFreshStopped=0;
     constexpr int REQUIRED_STOPPED_SAMPLES=3;
-    for(int attempt=0;attempt<30;++attempt) {
+    // 확답을 이미 받았으면 폴링하지 않는다.
+    // No polling once the answer is already in hand.
+    for(int attempt=0;attempt<30 && !stoppedConfirmed;++attempt) {
         if(shuttingDown() && !duringShutdown)
             return finalizationFailed("finalization cancelled by shutdown");
         const ApiResult stateResult=api_.recordingState(recorder);
@@ -1061,12 +1165,29 @@ bool RunOrchestrator::finishImpl(bool, bool duringShutdown)
         absentNow=false;
         const bool fresh=recorder.live && recorder.snapshotAgeMs>=0
             && recorder.snapshotAgeMs<=MAX_SNAPSHOT_AGE_MS;
-        if(fresh && recorder.recording) {
+        // ┌─ 한국어 ────────────────────────────────────────┐
+        // X-Rec-Recording 은 페이지가 발행하는 스냅샷을 타고 온다. 서버 상태가
+        // 아니다 — X-Rec-Elapsed-Ms 가 주행이 끝난 값에 얼어붙은 채 함께
+        // 나오는 것이 그 증거다. 그러므로 루프가 죽었다는 것이 증명된 순간
+        // 이 플래그는 아무것도 말해 주지 않는다. 그때의 진실은 rec/stop 이
+        // 돌려주는 상태 코드뿐이다.
+        // └────────────────────────────────────────────┘
+        // ┌─ English ───────────────────────────────────────┐
+        // X-Rec-Recording rides the snapshot the page publishes; it is not
+        // server state - the proof is X-Rec-Elapsed-Ms arriving frozen at the
+        // value it held when the run ended. So once the loop is provably down
+        // this flag says nothing at all, and the only truth left is the status
+        // code rec/stop returns.
+        // └────────────────────────────────────────────┘
+        const bool loopDown=simulatorLoopDown(recorder.snapshotAgeMs);
+        const bool usable=fresh || loopDown;
+        if(usable && recorder.recording) {
             consecutiveFreshStopped=0;
             const ApiResult repeatedStop=api_.recordingStop();
             if(!repeatedStop.ok && repeatedStop.status!=409)
                 return finalizationFailed("repeated recording stop: "+repeatedStop.error);
-        } else if(fresh) {
+            if(repeatedStop.status==409) { stoppedConfirmed=true; break; }
+        } else if(usable) {
             ++consecutiveFreshStopped;
             if(consecutiveFreshStopped>=REQUIRED_STOPPED_SAMPLES) {
                 stoppedConfirmed=true;

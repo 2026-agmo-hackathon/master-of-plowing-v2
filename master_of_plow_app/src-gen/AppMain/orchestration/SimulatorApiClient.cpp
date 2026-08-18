@@ -159,11 +159,15 @@ ApiResult SimulatorApiClient::catalog(Catalog& out)
         const Response r=request("GET",path); ApiResult a=apiResult(r); Json::Value v;
         if (!a.ok || !parseJson(r.body,v)) return a.ok?ApiResult{false,502,"invalid catalog JSON"}:a;
         if(!v.isObject()) return ApiResult{false,502,"invalid catalog JSON"};
+        // 이 두 가지는 전송 실패가 아니라 시뮬레이터의 답이다 — 서버는 200 으로
+        // 답했고, 그 내용이 "세계가 지금 안 돌고 있다" 는 것뿐이다.
+        // Neither is a transport failure: the server answered 200 and the answer
+        // is simply that the world is not turning right now.
         if(!boolean(v,"live"))
-            return ApiResult{false,503,std::string(key)+" catalog is not live"};
+            return ApiResult{false,503,std::string(key)+" catalog is not live",true};
         const long long age=integer(v,"snapshotAgeMs");
         if(age<0 || age>RunOrchestrator::MAX_CATALOG_AGE_MS)
-            return ApiResult{false,503,std::string(key)+" catalog is stale"};
+            return ApiResult{false,503,std::string(key)+" catalog is stale",true};
         const Json::Value& rows=v[key];
         if (!rows.isArray()) return ApiResult{false,502,"invalid catalog JSON"};
         for (const auto& entry:rows) {

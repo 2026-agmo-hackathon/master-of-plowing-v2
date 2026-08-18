@@ -942,6 +942,186 @@ TEST(RunOrchestratorTest, EngineOffIsConfirmedWhenTheSimulatorStopsReporting)
     EXPECT_TRUE(run.finished);
 }
 
+// ┌─ 한국어 ────────────────────────────────────────┐
+// SimWorld 물리는 브라우저 페이지 안에서 돈다. 그 페이지가 주행 도중 죽으면
+// API 서버는 멀쩡한데 스냅샷 발행만 영영 멈춘다 (실측: 9 분짜리 RDDF 주행에서
+// ticks 가 64545 에 얼어붙고 age 가 1,345,285 ms). 예전에는 종결의 첫 단계인
+// 물리 정지 확인이 신선한 샘플을 영원히 기다리다 시간 초과로 끝났고, 그 뒤
+// 단계인 레코더 정지에 아예 도달하지 못했다 — 완주 모달은 떴는데 기록만 계속
+// 돌아 시뮬레이션 시간이 흘렀다. 자동 Finish 도 1 초마다 같은 벽에 부딪혔다.
+// 서 있는 루프는 차량을 움직일 수도, 기록에 행을 더할 수도 없다. 그러니 정지로
+// 인정하고 레코더를 세워 아카이브까지 끝내야 한다.
+// └────────────────────────────────────────────┘
+// ┌─ English ───────────────────────────────────────┐
+// SimWorld physics runs inside a browser page. When that page dies mid-run the
+// API server is untouched but snapshot publishing stops forever (measured on a
+// 9-minute RDDF run: ticks frozen at 64545, age 1,345,285 ms). Finalization's
+// first step used to wait for a fresh sample until it timed out, never reaching
+// the recorder stop that follows - the completion modal appeared while the
+// recording kept running and simulated time kept advancing, and the automatic
+// Finish hit the same wall once a second. A stopped loop can neither move the
+// vehicle nor append a row, so it counts as stopped: stop the recorder and
+// carry the run through to the archive.
+// └────────────────────────────────────────────┘
+TEST(RunOrchestratorTest, AFrozenSimulatorPageStillStopsTheRecorderAndArchives)
+{
+    struct FrozenPageApi : FakeApi {
+        // 페이지가 죽은 시점 이후로는 selection 도 recorder 도 같은 낡은
+        // 스냅샷만 되돌려준다. recording 플래그만 API 서버가 계속 갱신한다.
+        // Once the page is dead both selection and recorder return the same
+        // frozen snapshot; only the recording flag is still API-server state.
+        bool frozen=false;
+        ApiResult selection(Selection& out) override {
+            const ApiResult result=FakeApi::selection(out);
+            if(frozen) {
+                out.live=false;
+                out.snapshotAgeMs=1345285;
+                out.stopped=false;
+                out.reactRunning=true;
+                out.ticks=64545;
+            }
+            return result;
+        }
+        ApiResult recordingState(RecorderState& out) override {
+            const ApiResult result=FakeApi::recordingState(out);
+            if(frozen) { out.live=false; out.snapshotAgeMs=1345285; }
+            return result;
+        }
+        ApiResult recording(Recording& out) override {
+            const ApiResult result=FakeApi::recording(out);
+            if(frozen) { out.live=false; out.snapshotAgeMs=1345285; }
+            return result;
+        }
+    } api;
+    FakeStore store; FakeRun run; std::atomic<int> finalized{0};
+    RunOrchestrator o(api,store,run,{},
+        [&](const std::string&,const std::string&){++finalized;});
+    ASSERT_TRUE(o.start(request()));
+    api.frozen=true;
+    ASSERT_TRUE(o.finish(true));
+    EXPECT_EQ(o.snapshot().finalization,FinalizationState::Completed);
+    EXPECT_EQ(o.snapshot().postRun,PostRunState::AwaitingAction);
+    EXPECT_GE(api.stopCalls,1);
+    EXPECT_FALSE(api.recorder.recording);
+    EXPECT_EQ(store.calls,1);
+    EXPECT_EQ(finalized.load(),1);
+    EXPECT_TRUE(run.finished);
+}
+
+// ┌─ 한국어 ────────────────────────────────────────┐
+// 얼어붙은 페이지에서 에뮬레이터는 스스로 모순된 답을 내놓는다 (실측
+// 2026-08-18): GET /api/simulator/rec 은 X-Rec-Recording: true 를, POST
+// /api/simulator/rec/stop 은 HTTP 409 {"ok":false,"error":"not recording"} 을
+// 동시에 돌려준다. 헤더가 페이지 스냅샷을 타고 오기 때문이며, 같은 응답의
+// X-Rec-Elapsed-Ms 가 주행 종료 값에 얼어붙어 있는 것이 그 증거다. 앱은 이
+// 거짓 true 를 보고 stop 을 30 번 재발행하고 "recording stop confirmation
+// timed out" 으로 끝났다. 409 는 서버의 확답이므로 그것이 확인이다.
+// └────────────────────────────────────────────┘
+// ┌─ English ───────────────────────────────────────┐
+// On a frozen page the emulator contradicts itself (measured 2026-08-18): GET
+// /api/simulator/rec answers X-Rec-Recording: true while POST
+// /api/simulator/rec/stop answers HTTP 409 {"ok":false,"error":"not recording"}.
+// The header rides the page snapshot - the proof is X-Rec-Elapsed-Ms in the same
+// response, frozen at the value it held when the run ended. Believing that false
+// true made the app re-issue the stop thirty times and end in "recording stop
+// confirmation timed out". The 409 is the server's own answer, so it confirms.
+// └────────────────────────────────────────────┘
+TEST(RunOrchestratorTest, A409NotRecordingConfirmsTheStopAgainstAFrozenHeader)
+{
+    struct ContradictingApi : FakeApi {
+        bool frozen=false;
+        int stopsAfterFreeze=0;
+        ApiResult selection(Selection& out) override {
+            const ApiResult result=FakeApi::selection(out);
+            if(frozen) { out.live=false; out.snapshotAgeMs=2011015; out.stopped=false; }
+            return result;
+        }
+        // 얼어붙은 뒤에도 헤더는 계속 recording=true 라고 우긴다.
+        // The header keeps insisting recording=true after the freeze.
+        ApiResult recordingState(RecorderState& out) override {
+            const ApiResult result=FakeApi::recordingState(out);
+            if(frozen) { out.live=false; out.snapshotAgeMs=2011015; out.recording=true; }
+            return result;
+        }
+        ApiResult recordingStop() override {
+            if(frozen) { ++stopsAfterFreeze; return {false,409,"not recording"}; }
+            return FakeApi::recordingStop();
+        }
+        ApiResult recording(Recording& out) override {
+            const ApiResult result=FakeApi::recording(out);
+            if(frozen) { out.live=false; out.snapshotAgeMs=2011015; out.recording=true; }
+            return result;
+        }
+    } api;
+    FakeStore store; FakeRun run; std::atomic<int> finalized{0};
+    RunOrchestrator o(api,store,run,{},
+        [&](const std::string&,const std::string&){++finalized;});
+    ASSERT_TRUE(o.start(request()));
+    api.frozen=true;
+    ASSERT_TRUE(o.finish(true));
+    EXPECT_EQ(o.snapshot().finalization,FinalizationState::Completed);
+    EXPECT_EQ(o.snapshot().postRun,PostRunState::AwaitingAction);
+    // 첫 409 로 끝나야 한다. 30 번 재발행은 이 버그의 지문이었다.
+    // The first 409 has to settle it; thirty re-issues were the bug's fingerprint.
+    EXPECT_EQ(api.stopsAfterFreeze,1);
+    EXPECT_EQ(store.calls,1);
+    EXPECT_EQ(finalized.load(),1);
+    EXPECT_TRUE(run.finished);
+}
+
+// 얼어붙은 recording=true 는 보관 관문도 막았다. 루프가 죽은 것이 증명되면
+// 그 플래그는 아무것도 말해 주지 않는다 — 서 있는 루프는 행을 더할 수 없다.
+//
+// The frozen recording=true also blocked the archive gate. Once the loop is
+// provably down the flag says nothing: a stopped loop cannot append a row.
+TEST(RunOrchestratorTest, AFrozenRecordingFlagDoesNotBlockTheArchive)
+{
+    std::string reason;
+    Recording live{"x","text/csv","attachment; filename=x",true,true,10};
+    EXPECT_FALSE(RunOrchestrator::recAcceptable(live,reason));
+    EXPECT_EQ(reason,"recorder still running");
+
+    Recording frozen{"x","text/csv","attachment; filename=x",false,true,2011015};
+    EXPECT_TRUE(RunOrchestrator::recAcceptable(frozen,reason)) << reason;
+}
+
+// 루프가 잠깐 걸른 것과 죽은 것은 다르다. MAX_SNAPSHOT_AGE_MS 와
+// SIMULATOR_DOWN_AGE_MS 사이의 나이는 여전히 확인 실패로 남아야 한다 — 그
+// 구간에서 정지를 단정하면 아직 굴러가는 차량을 세웠다고 기록하게 된다.
+//
+// A missed beat is not a dead loop. An age between MAX_SNAPSHOT_AGE_MS and
+// SIMULATOR_DOWN_AGE_MS must still fail confirmation; concluding a stop there
+// would record a vehicle that is still rolling as stopped.
+TEST(RunOrchestratorTest, AMerelyLateSnapshotIsNotTreatedAsADeadLoop)
+{
+    EXPECT_FALSE(RunOrchestrator::simulatorLoopDown(
+        RunOrchestrator::MAX_SNAPSHOT_AGE_MS+1));
+    EXPECT_FALSE(RunOrchestrator::simulatorLoopDown(
+        RunOrchestrator::SIMULATOR_DOWN_AGE_MS-1));
+    EXPECT_TRUE(RunOrchestrator::simulatorLoopDown(
+        RunOrchestrator::SIMULATOR_DOWN_AGE_MS));
+
+    struct LateApi : FakeApi {
+        bool finishing=false;
+        ApiResult selection(Selection& out) override {
+            const ApiResult result=FakeApi::selection(out);
+            if(finishing) {
+                out.live=false;
+                out.snapshotAgeMs=RunOrchestrator::SIMULATOR_DOWN_AGE_MS-1;
+                out.stopped=false;
+            }
+            return result;
+        }
+    } api;
+    FakeStore store; FakeRun run; RunOrchestrator o(api,store,run);
+    ASSERT_TRUE(o.start(request()));
+    api.finishing=true;
+    EXPECT_FALSE(o.finish(true));
+    EXPECT_EQ(o.snapshot().finalization,FinalizationState::RetryableError);
+    EXPECT_EQ(api.stopCalls,0);
+    EXPECT_EQ(store.calls,0);
+}
+
 // 기록이 없다는 404 는 확답이다. 이것을 통신 오류로 취급하는 동안 Finish 는
 // "recording stop confirmation timed out" 으로만 끝났고, 그 뒤 모든 Start 가
 // 조용히 거절됐다.
@@ -1597,8 +1777,46 @@ TEST(RunOrchestratorTest, RefreshRejectsAStaleSelectionSnapshot)
 {
     FakeApi api; FakeStore store; FakeRun run; RunOrchestrator o(api,store,run);
     api.selected.snapshotAgeMs=RunOrchestrator::MAX_SNAPSHOT_AGE_MS+1;
+    // 낡은 스냅샷은 어느 한 번의 폴로 단정하지 않는다. 계속 낡아 있으면
+    // 예산 안에서 반드시 올라온다.
+    // A stale snapshot is not concluded from any single poll, but a sustained
+    // one still has to surface within the budget.
+    for(int poll=1;poll<RunOrchestrator::STALE_CATALOG_POLLS_BEFORE_FAILED;++poll) {
+        EXPECT_FALSE(o.refresh()) << "poll "<<poll;
+        EXPECT_NE(o.snapshot().phase,Phase::Failed) << "poll "<<poll;
+    }
     EXPECT_FALSE(o.refresh());
     EXPECT_EQ(o.snapshot().phase,Phase::Failed);
+}
+
+// ┌─ 한국어 ────────────────────────────────────────┐
+// 엔진이 꺼진 시뮬레이터는 물리 루프가 서서 스냅샷을 띄엄띄엄만 발행한다
+// (실측: live=false age=9154ms 와 live=true age=255ms 가 폴마다 번갈아 나옴).
+// 낡은 샘플 하나마다 Failed 로 꺾으면 "simulator catalog is stale" 배너가
+// 2.5 초 주기로 나왔다 사라졌다 한다. 사이사이 신선한 샘플이 오는 한 배너는
+// 올라오면 안 된다.
+// └────────────────────────────────────────────┘
+// ┌─ English ───────────────────────────────────────┐
+// An engine-off simulator has stopped its physics loop and publishes only
+// sporadically (measured: live=false age=9154ms alternating poll by poll with
+// live=true age=255ms). Flipping to Failed on each stale sample makes the
+// "simulator catalog is stale" banner appear and vanish every 2.5 s. As long as
+// fresh samples keep arriving in between, the banner must never be raised.
+// └────────────────────────────────────────────┘
+TEST(RunOrchestratorTest, AlternatingStaleAndFreshCatalogPollsNeverRaiseTheBanner)
+{
+    FakeApi api; FakeStore store; FakeRun run; RunOrchestrator o(api,store,run);
+    for(int cycle=0;cycle<8;++cycle) {
+        api.selected.live=false;
+        api.selected.snapshotAgeMs=9154;
+        EXPECT_FALSE(o.refresh()) << "stale poll of cycle "<<cycle;
+        EXPECT_NE(o.snapshot().phase,Phase::Failed) << "stale poll of cycle "<<cycle;
+        EXPECT_TRUE(o.snapshot().error.empty()) << o.snapshot().error;
+        api.selected.live=true;
+        api.selected.snapshotAgeMs=255;
+        EXPECT_TRUE(o.refresh()) << "fresh poll of cycle "<<cycle;
+        EXPECT_EQ(o.snapshot().phase,Phase::Idle);
+    }
 }
 
 // 종결이 엔진을 끄면 시뮬레이터는 물리 루프를 멈추고 스냅샷을 띄엄띄엄만
@@ -1637,6 +1855,67 @@ TEST(RunOrchestratorTest, PostRunRefreshOutageStaysQuietWhileAwaitingAction)
 // The UI polls every 2.5 s; broadcasting the Refreshing/busy pass-through made
 // the edit gate lock and unlock on every poll, visibly blinking the setup
 // selects. A read-only refresh must publish settled snapshots only.
+// ┌─ 한국어 ────────────────────────────────────────┐
+// "maps catalog is not live" 는 전송 실패가 아니다 — 서버는 200 으로 답했고
+// 클라이언트가 그 답을 실패 결과로 옮겨 담을 뿐이다. 그래서 낡은 스냅샷과
+// 똑같이 디바운스되어야 한다. 실측 2026-08-18: 이 구분이 없던 동안 9 분 주행
+// 내내 phase 가 running -> failed -> running 으로 2~5 초마다 뒤집혔다.
+// 서버에 닿지 못한 요청은 종전대로 첫 폴에 곧장 보고한다.
+// └────────────────────────────────────────────┘
+// ┌─ English ───────────────────────────────────────┐
+// "maps catalog is not live" is not a transport failure: the server answered
+// 200 and the client merely folds that answer into a failed result, so it has
+// to be debounced exactly like a stale snapshot. Measured 2026-08-18: without
+// the distinction the phase flipped running -> failed -> running every two to
+// five seconds for a whole nine-minute run. A request that never reached the
+// server is still reported on the first poll.
+// └────────────────────────────────────────────┘
+TEST(RunOrchestratorTest, AQuietSimulatorIsDebouncedButAnUnreachableOneIsNot)
+{
+    struct QuietApi : FakeApi {
+        bool quiet=false;
+        bool unreachable=false;
+        ApiResult catalog(Catalog& out) override {
+            const ApiResult result=FakeApi::catalog(out);
+            if(unreachable) return {false,503,"connection refused",false};
+            if(quiet) return {false,503,"maps catalog is not live",true};
+            return result;
+        }
+    } api;
+    FakeStore store; FakeRun run; RunOrchestrator o(api,store,run);
+    ASSERT_TRUE(o.refresh());
+
+    api.quiet=true;
+    for(int poll=1;poll<RunOrchestrator::STALE_CATALOG_POLLS_BEFORE_FAILED;++poll) {
+        EXPECT_FALSE(o.refresh()) << "quiet poll "<<poll;
+        EXPECT_NE(o.snapshot().phase,Phase::Failed) << "quiet poll "<<poll;
+        EXPECT_TRUE(o.snapshot().error.empty()) << o.snapshot().error;
+    }
+    EXPECT_FALSE(o.refresh());
+    EXPECT_EQ(o.snapshot().phase,Phase::Failed);
+    EXPECT_EQ(o.snapshot().error,"maps catalog is not live");
+
+    // 사이사이 신선한 폴이 오면 배너는 올라오지 않는다.
+    // A fresh poll in between keeps the banner down.
+    FakeStore store2; FakeRun run2; QuietApi api2;
+    RunOrchestrator flapping(api2,store2,run2);
+    for(int cycle=0;cycle<6;++cycle) {
+        api2.quiet=true;
+        EXPECT_FALSE(flapping.refresh());
+        EXPECT_NE(flapping.snapshot().phase,Phase::Failed) << "cycle "<<cycle;
+        api2.quiet=false;
+        EXPECT_TRUE(flapping.refresh());
+    }
+
+    // 닿지 못한 요청은 디바운스하지 않는다.
+    // An unreachable server is not debounced.
+    FakeStore store3; FakeRun run3; QuietApi api3; api3.unreachable=true;
+    RunOrchestrator dead(api3,store3,run3);
+    EXPECT_FALSE(dead.refresh());
+    EXPECT_EQ(dead.snapshot().phase,Phase::Failed);
+    EXPECT_EQ(dead.snapshot().error,"connection refused");
+}
+
 TEST(RunOrchestratorTest, RefreshNeverBroadcastsABusyPassThroughFrame)
 {
     FakeApi api; FakeStore store; FakeRun run;

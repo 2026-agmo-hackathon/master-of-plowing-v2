@@ -74,6 +74,20 @@ struct ApiResult {
     bool ok = false;
     int status = 0;
     std::string error;
+    // ┌─ 한국어 ────────────────────────────────────────┐
+    // 요청은 성공했는데 그 응답이 "지금 시뮬레이터가 발행 중이 아니다" 라고
+    // 말하는 경우. 클라이언트가 이것을 실패 결과로 옮겨 담기 때문에, 이 표시가
+    // 없으면 호출자는 서버에 못 닿은 것과 구분할 수 없다. 엔진이 꺼진 유휴
+    // 상태에서는 정상적으로 참이 되므로 곧바로 오류로 올려서는 안 된다.
+    // └────────────────────────────────────────────┘
+    // ┌─ English ───────────────────────────────────────┐
+    // The request succeeded but its answer says the simulator is not publishing
+    // right now. The client folds that into a failed result, so without this
+    // flag a caller cannot tell it apart from not reaching the server at all.
+    // It is normally true whenever the engine is off, so it must not be raised
+    // as an error on sight.
+    // └────────────────────────────────────────────┘
+    bool simulatorQuiet = false;
 };
 struct UnsubmittedRecord { std::string runId,teamName,createdAt,error; std::size_t bytes=0; bool csvAvailable=false; };
 
@@ -181,6 +195,40 @@ public:
     // └────────────────────────────────────────────────────────────────────┘
     static constexpr long long MAX_SNAPSHOT_AGE_MS = 2000;
     static constexpr long long MAX_CATALOG_AGE_MS = 10000;
+    // ┌─ 한국어 ────────────────────────────────────────┐
+    // SimWorld 물리는 브라우저 페이지 안에서 돌고, 그 페이지가 죽으면 API 서버는
+    // 그대로 살아 있지만 스냅샷 발행만 영영 멈췄다 (실측: 9 분짜리 주행에서
+    // ticks 가 64545 에 얼어붙고 age 가 1,345,285 ms 까지 늘었다). 그 상태에서
+    // "신선한 샘플" 을 기다리는 확인 루프는 영원히 성공할 수 없고, Finish 가
+    // 1 단계에서 막혀 레코더를 끝내 정지하지 못한다 — 주행은 끝났는데 기록만
+    // 계속 돌았다.
+    // 이 예산을 넘긴 나이는 일시적인 끊김이 아니라 루프가 서 있다는 증거로 받는다.
+    // 발행 주기의 15 배라 정상 톱니와 겹치지 않고, 물리 루프가 서 있으면 차량도
+    // 움직일 수 없고 레코더에 새 행이 들어갈 수도 없다.
+    // └────────────────────────────────────────────┘
+    // ┌─ English ───────────────────────────────────────┐
+    // SimWorld physics runs inside a browser page. When that page dies the API
+    // server stays up while snapshot publishing stops forever (measured on a
+    // 9-minute run: ticks frozen at 64545, age climbing to 1,345,285 ms). No
+    // confirmation loop that waits for a fresh sample can ever succeed there,
+    // so Finish stalls on its first step and never stops the recorder - the run
+    // is over but the recording keeps running.
+    // An age past this budget is not a transient miss; it is proof the loop is
+    // down. Fifteen publish periods cannot be reached by the normal sawtooth,
+    // and a stopped physics loop can neither move the vehicle nor add a row to
+    // the recording.
+    // └────────────────────────────────────────────┘
+    static constexpr long long SIMULATOR_DOWN_AGE_MS = 15000;
+    // 엔진이 꺼진 시뮬레이터는 발행이 띄엄띄엄해서 신선/낡음이 폴마다 번갈아
+    // 나온다. 한 번 낡았다고 곧장 Failed 로 꺾으면 배너가 2.5 초 주기로
+    // 깜빡인다. 연속으로 낡았을 때만 올려서, 진짜 끊긴 경우는 여전히 보이게
+    // 하면서 깜빡임만 없앤다.
+    //
+    // An engine-off simulator publishes sporadically, so fresh and stale
+    // alternate poll by poll; flipping to Failed on the first stale reading
+    // blinks the banner every 2.5 s. Raising it only after consecutive stale
+    // polls keeps a genuine outage visible and removes just the flapping.
+    static constexpr int STALE_CATALOG_POLLS_BEFORE_FAILED = 3;
     static constexpr std::size_t MAX_RECORDING_BYTES = 64u * 1024u * 1024u;
 
     // notify 는 스냅샷 밖의 지속 알림 채널이다. 스냅샷 error 는 2.5 초 주기
@@ -245,6 +293,10 @@ public:
     // loop, after which nothing can be observed at all.
     static bool vehicleAtRestSampleAcceptable(const Selection& selection,
                                               const StartRequest& expected);
+    /** True when an observed snapshot age proves the simulator's physics loop
+     * has stopped publishing altogether, rather than merely missing a beat.
+     * Only meaningful on a reading the API server actually answered. */
+    static bool simulatorLoopDown(long long snapshotAgeMs);
 
 private:
     // 아카이브 실패는 두 종류다. Retryable 은 다시 Finish 하면 풀릴 수 있는
@@ -280,6 +332,7 @@ private:
     // Dedup state for the transition log written to fcal.log (guarded by mutex_).
     Phase loggedPhase_ = Phase::Idle;
     std::string loggedError_;
+    int consecutiveStaleCatalogPolls_ = 0;
     FinalizationState finalizationState_ = FinalizationState::Idle;
     unsigned long long runGeneration_ = 0;
     unsigned long long finalizationGeneration_ = 0;
