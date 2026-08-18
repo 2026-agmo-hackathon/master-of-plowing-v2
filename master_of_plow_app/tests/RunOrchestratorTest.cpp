@@ -572,10 +572,28 @@ TEST(RunOrchestratorTest, ExplicitCaptureGrantAndDurableAckAreExactRunBound)
     EXPECT_FALSE(o.beginSealedCapture("other"));
     ASSERT_TRUE(o.beginSealedCapture(id));
     EXPECT_EQ(o.snapshot().postRun,PostRunState::CaptureInProgress);
-    EXPECT_FALSE(o.beginSealedCapture(id));
+    // 캡처·제출은 브라우저 소유라 같은 주행에 대한 재통지는 거절이 아니라
+    // 멱등한 성공이다 — 거절하면 화면에만 실패로 보인다.
+    // Capture and submission are browser-owned, so a repeat notice for the same
+    // run is an idempotent success, not a refusal that only looks like failure.
+    EXPECT_TRUE(o.beginSealedCapture(id));
+    EXPECT_EQ(o.snapshot().postRun,PostRunState::CaptureInProgress);
     ASSERT_TRUE(o.acknowledgeSealedCapture(id));
     EXPECT_EQ(o.snapshot().postRun,PostRunState::CaptureDurable);
     EXPECT_TRUE(o.acknowledgeSealedCapture(id));
+}
+
+TEST(RunOrchestratorTest, CaptureGrantSurvivesAFailedResetAndSkippedGrant)
+{
+    FakeApi api;FakeStore store;FakeRun run;RunOrchestrator o(api,store,run);
+    ASSERT_TRUE(o.start(request()));ASSERT_TRUE(o.finish(false));
+    const std::string id=o.snapshot().recordingId;
+    // 승인 전이 없이 봉인본을 확보한 브라우저의 보고도 받는다.
+    // A browser that captured without the grant transition is still believed.
+    ASSERT_TRUE(o.acknowledgeSealedCapture(id));
+    EXPECT_EQ(o.snapshot().postRun,PostRunState::CaptureDurable);
+    ASSERT_TRUE(o.markLeaderboardSubmitted(id,"SCORED"));
+    EXPECT_EQ(o.snapshot().postRun,PostRunState::Submitted);
 }
 
 TEST(RunOrchestratorTest, ResetRequiresRefreshThenExactResetAnd404Proof)
@@ -796,7 +814,6 @@ TEST(RunOrchestratorTest, SubmittedLedgerAcceptsDurableCurrentRunAndArchivedRuns
 {
     FakeApi api;FakeStore store;FakeRun run;RunOrchestrator o(api,store,run);
     ASSERT_TRUE(o.start(request()));ASSERT_TRUE(o.finish(false));const auto id=o.snapshot().recordingId;
-    EXPECT_FALSE(o.markLeaderboardSubmitted(id,"SCORED"));
     ASSERT_TRUE(o.beginSealedCapture(id));ASSERT_TRUE(o.acknowledgeSealedCapture(id));
     EXPECT_FALSE(o.markLeaderboardSubmitted(id,"BAD"));
     // 과거(보관) 주행의 뒤늦은 제출 보고: 원장에만 기록되고 현재 주행의 주행 후

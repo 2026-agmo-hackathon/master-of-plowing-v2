@@ -320,6 +320,15 @@ export function RunSetup({ orchestration: o, leaderboard, recordingDownload, lin
   const leaderboardCaptureBlocking=isCurrentRunCaptureBlocking(o,leaderboard)
   const postRun=Boolean(o?.recordingId && o.finalization==='completed')
   const finishRetry=o?.finalization==='retryable_error'
+  // 제출 진행 여부는 아웃박스가 안다 — 백엔드의 capture_in_progress 는 통지일
+  // 뿐이라 오지 않을 수도 있고, 그때 버튼이 계속 눌리는 상태로 남으면 사용자는
+  // 아무 반응 없는 버튼을 반복해서 누르게 된다.
+  // The outbox knows whether a submission is running: the backend's
+  // capture_in_progress is only a notice and may never arrive, which would leave
+  // the button live and invite repeated presses on a button that does nothing.
+  const submitBusy=Boolean(o?.recordingId && leaderboard?.runId===o.recordingId
+    && (leaderboard.status==='capture_pending' || leaderboard.status==='pending'
+      || leaderboard.status==='submitting'))
   // SimWorld 물리는 브라우저 페이지 안에서 돈다. 창이 가려지면(hidden) 세계가
   // 멈추고, 오래(약 5분+) 가려졌던 페이지는 다시 보여도 schedule='timer' 에
   // 갇혀 스스로 깨어나지 못한다 — 둘 다 Start 가 조용히 무의미해지는 상태인데
@@ -398,8 +407,8 @@ export function RunSetup({ orchestration: o, leaderboard, recordingDownload, lin
     <div data-testid="run-actions" className="run-setup-actions">
       <Button variant="solid" tone="brand" size="lg" fullWidth disabled={!editable || !complete || leaderboardCaptureBlocking || postRun || finishRetry} onClick={start}>Start</Button>
       <Button variant="solid" tone="critical" size="lg" fullWidth disabled={!finishRetry && runState !== 'running' && o?.phase !== 'starting' && o?.phase !== 'running'} onClick={finish}>Finish</Button>
-      {postRun&&<Button variant="solid" tone="brand" size="lg" fullWidth disabled={o?.postRun==='capture_in_progress'} onClick={submit}>Submit</Button>}
-      {postRun&&<Button variant="solid" tone="neutral" size="lg" fullWidth disabled={o?.postRun==='capture_in_progress'||Boolean(o?.busy)} onClick={reset}>Reset</Button>}
+      {postRun&&<Button variant="solid" tone="brand" size="lg" fullWidth disabled={o?.postRun==='capture_in_progress'||submitBusy} onClick={submit}>Submit</Button>}
+      {postRun&&<Button variant="solid" tone="neutral" size="lg" fullWidth disabled={o?.postRun==='capture_in_progress'||submitBusy||Boolean(o?.busy)} onClick={reset}>Reset</Button>}
     </div>
     {!fresh && <Paragraph typography="xs" color={theme.warn}>Catalog or simulator status is stale. <a href="#retry" onClick={(e)=>{e.preventDefault();send({kind:'get_orchestration_state'})}}>Retry</a></Paragraph>}
     {/* 직전 주행 마무리가 실패하면 백엔드는 모든 Start 를 거절한다. 그 사실이
@@ -522,15 +531,21 @@ export function unsubmittedSubmitPath(
   record: NonNullable<RunSetupProps['unsubmittedRecords']>[number],
   orchestration: RunSetupProps['orchestration'],
 ): 'current'|'outbox'|null {
-  // 봉인본이 이미 있으면 그 경로가 우선이다: 캡처가 끝난 현재 주행에
-  // begin_sealed_capture 를 다시 보내면 백엔드가 거부한다(awaiting_action 이
-  // 아니므로). / A stored envelope wins: re-sending begin_sealed_capture for a
-  // run whose capture already finished is refused (postRun left awaiting_action).
+  // 봉인본이 이미 있으면 그 경로가 우선이다: 다시 캡처해 봐야 같은 봉인본이고,
+  // 리더보드로 보내는 일만 남았으므로 아웃박스 재시도가 정확한 경로다.
+  // A stored envelope wins: re-capturing would only fetch the same envelope, and
+  // all that is left is posting it, which is exactly the outbox retry path.
   if(record.outboxHasEnvelope&&record.outboxRetryAllowed)return 'outbox'
+  // 리셋이 한 번 실패해 reset_retryable 로 굳은 주행도 제출할 수 있어야 한다 —
+  // 봉인본은 여전히 현재 레코더 안에 있고, 제출은 UI 가 스스로 끝낸다.
+  // A run stuck at reset_retryable by a failed reset must stay submittable: its
+  // envelope is still in the current recorder and the UI completes the
+  // submission on its own.
   if(orchestration?.recordingId===record.runId
     && orchestration.finalization==='completed'
     && (orchestration.postRun===undefined
-      ||orchestration.postRun==='awaiting_action'))return 'current'
+      ||orchestration.postRun==='awaiting_action'
+      ||orchestration.postRun==='reset_retryable'))return 'current'
   return null
 }
 

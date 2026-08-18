@@ -269,9 +269,13 @@ describe('RunSetup',()=>{
     const current={...state,finalization:'completed' as const,recordingId:'run-1'}
     expect(unsubmittedSubmitPath(record,current)).toBe('current')
     expect(unsubmittedSubmitPath(record,{...current,postRun:'capture_in_progress' as const})).toBeNull()
-    // 캡처가 끝난 현재 주행은 봉인본 재전송(outbox)이어야 한다 — begin_sealed_capture
-    // 재요청은 거부된다. / A captured current run must resubmit its envelope;
-    // a second begin_sealed_capture is refused.
+    // 리셋이 실패해 굳은 주행도 제출 경로가 남아 있어야 한다 — 봉인본은 아직
+    // 현재 레코더 안에 있다. / A run stuck by a failed reset keeps its submit
+    // path: the envelope is still in the current recorder.
+    expect(unsubmittedSubmitPath(record,{...current,postRun:'reset_retryable' as const})).toBe('current')
+    // 캡처가 끝난 현재 주행은 봉인본 재전송(outbox)이어야 한다 — 다시 캡처해도
+    // 같은 봉인본이다. / A captured current run must resubmit its stored
+    // envelope; re-capturing would fetch the same one.
     expect(unsubmittedSubmitPath({...record,outboxHasEnvelope:true,outboxRetryAllowed:true},
       {...current,postRun:'capture_durable' as const})).toBe('outbox')
     expect(unsubmittedSubmitPath(record,{...current,postRun:'capture_durable' as const})).toBeNull()

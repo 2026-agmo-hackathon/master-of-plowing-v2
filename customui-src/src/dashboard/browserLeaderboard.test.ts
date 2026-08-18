@@ -39,6 +39,28 @@ describe('browser leaderboard boundary',()=>{
     expect(frames).toEqual(['captured:ack-lost','submitted:ack-lost:SCORED'])
     await activate(service,'ack-lost','submitted');expect(frames).toHaveLength(2)
   })
+  // 제출은 UI 가 소유한다: 백엔드가 capture_in_progress 로 전이해 주지 않아도
+  // 캡처는 시작되고, 그 뒤에 오는 스냅샷이 승인을 되돌려 재시도를 없애면 안 된다.
+  // The UI owns submission: capture starts without the backend transitioning to
+  // capture_in_progress, and a later snapshot must not revoke the grant and strand
+  // the retry.
+  it('retries a UI-started capture the backend never granted',async()=>{
+    const store=new MemoryStore()
+    let captures=0
+    const fetcher=vi.fn(async(url:string|URL|Request)=>{
+      if(String(url)!=='/ws/rest/api/simulator/rec.enc')return scored()
+      captures+=1
+      if(captures===1)throw new Error('network')
+      return sealed()
+    })
+    const service=new BrowserLeaderboardService({store,fetch:fetcher as typeof fetch,leaderboardUrl:'/submit'})
+    await activate(service,'ungranted','awaiting_action')
+    await service.enqueue('T','ungranted');await settle()
+    expect(store.values.get('ungranted')?.status).toBe('capture_error')
+    await activate(service,'ungranted','awaiting_action');await settle()
+    expect(store.values.get('ungranted')?.status).toBe('submitted')
+    service.shutdown()
+  })
   it('waits for every live tab durable drain acknowledgement without same-realm shortcuts',async()=>{
     vi.stubGlobal('navigator',{})
     try{

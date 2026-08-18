@@ -51,7 +51,19 @@ export class BrowserLeaderboardService{
     this.authorityRunId=orchestration?.finalization==='completed'?orchestration.recordingId:undefined
     this.authorityPostRun=orchestration?.postRun
     this.authorityResetGeneration=orchestration?.resetGeneration??0
-    this.captureGrantedRunId=orchestration?.postRun==='capture_in_progress'?orchestration.recordingId:undefined
+    // 캡처 승인은 UI 가 소유한다. 예전에는 스냅샷마다 백엔드의
+    // capture_in_progress 로 통째로 덮어써서, 백엔드가 그 전이를 거절하면 방금
+    // 시작한 캡처가 다음 폴링(2.5초)에 승인 없는 상태가 되어 resume/retry 경로에서
+    // 통째로 빠졌다 — 봉인본을 받기 전에 한 번 실패하면 영영 다시 시도되지 않았다.
+    // 백엔드 승인은 이제 더하기만 한다(새로고침·다른 탭 복구용).
+    // The UI owns the capture grant. Overwriting it from the backend's
+    // capture_in_progress on every snapshot meant a refused transition silently
+    // revoked a capture the user had just started: 2.5 s later it was ungranted
+    // and dropped out of the resume/retry paths, so one failure before the
+    // envelope arrived was never retried. The backend grant is now additive only,
+    // for reload and other-tab resume.
+    if(orchestration?.postRun==='capture_in_progress')this.captureGrantedRunId=orchestration.recordingId
+    else if(orchestration?.postRun==='none')this.captureGrantedRunId=undefined
     if(orchestration?.postRun==='none')await this.confirmAuthoritativeDrain(this.authorityResetGeneration)
     // 완료 확인 경로는 세대가 맞을 때만 표식을 지운다. 앱이 재시작하면 백엔드의
     // resetGeneration 은 0 으로 돌아가므로 어떤 세대와도 맞지 않아, 남은 표식이
@@ -93,10 +105,10 @@ export class BrowserLeaderboardService{
     await this.persist(r);if(this.authorityReady)this.schedule(r)
   }
   async retry(runId:string){if(!this.authorityReady||this.active.has(runId))return;const r=await this.d.store.get(runId);if(!r?.retryAllowed||(!r.envelope&&runId!==this.captureGrantedRunId))return;this.schedule(r,true)}
-  async discard(runId:string){const retired=await this.d.store.discard(runId);if(retired)this.d.publish?.(state(retired))}
+  async discard(runId:string){if(this.captureGrantedRunId===runId)this.captureGrantedRunId=undefined;const retired=await this.d.store.discard(runId);if(retired)this.d.publish?.(state(retired))}
   private abortActive(){for(const controller of this.activeAbort.values())controller.abort(new Error('discarded by run reset'))}
   private async abortAndDrain(){this.abortActive();await Promise.allSettled([...this.activeTasks.values()])}
-  private async handleDrain(request:DrainRequest){this.drainBlocked=true;this.authorityReady=false;await this.abortAndDrain();const retired=await this.d.store.discardUnsubmitted();for(const row of retired)this.d.publish?.(state(row));await this.d.store.acknowledgeDrain(request.requestId,this.tabId);this.purgeChannel?.postMessage({...request,kind:'drain',ack:this.tabId})}
+  private async handleDrain(request:DrainRequest){this.drainBlocked=true;this.authorityReady=false;this.captureGrantedRunId=undefined;await this.abortAndDrain();const retired=await this.d.store.discardUnsubmitted();for(const row of retired)this.d.publish?.(state(row));await this.d.store.acknowledgeDrain(request.requestId,this.tabId);this.purgeChannel?.postMessage({...request,kind:'drain',ack:this.tabId})}
   private async observeCompletion(completion:DrainRequest){
     // A broadcast is only a wake-up hint.  The tab reopens admission solely
     // after its own authoritative backend snapshot confirms the same reset.

@@ -1405,12 +1405,27 @@ bool RunOrchestrator::resetCompletedRun()
 
 bool RunOrchestrator::beginSealedCapture(const std::string& runId)
 {
+    // 봉인본을 받아 리더보드로 보내는 일은 전부 브라우저가 한다. 여기서 하는 일은
+    // 그 사실을 화면과 재접속 복구에 알리는 상태 전이뿐이므로, 정확히 이 주행이
+    // 맞기만 하면 승인한다. 예전에는 postRun 이 awaiting_action 일 때만
+    // 받아들여서, 리셋이 한 번 실패해 reset_retryable 로 굳거나 캡처가 이미
+    // 지나간 뒤에는 Submit 을 누를 때마다 거절돼 화면에 "sealed capture is not
+    // authorized" 만 반복해서 떴다 — 제출할 방법이 아예 없었다.
+    //
+    // The browser does the whole submission: it fetches the sealed envelope and
+    // posts it to the leaderboard. All this does is mirror that in the snapshot
+    // for the screen and for reload-resume, so naming the exact run is enough to
+    // be granted. Accepting only from awaiting_action meant that once a failed
+    // reset had stuck postRun at reset_retryable — or once capture had moved on —
+    // every Submit was refused with "sealed capture is not authorized" and there
+    // was no path left to submit at all.
     Snapshot copy;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         if(finalizationState_!=FinalizationState::Completed
-            || snapshot_.recordingId!=runId
-            || snapshot_.postRun!=PostRunState::AwaitingAction)return false;
+            || snapshot_.recordingId!=runId)return false;
+        if(snapshot_.postRun!=PostRunState::AwaitingAction
+            && snapshot_.postRun!=PostRunState::ResetRetryable)return true;
         snapshot_.postRun=PostRunState::CaptureInProgress;copy=publishable(snapshot_);
     }
     if(publish_)publish_(copy);
@@ -1429,7 +1444,14 @@ bool RunOrchestrator::acknowledgeSealedCapture(const std::string& runId)
         // second transition or weakening the exact-run check.
         if(snapshot_.postRun==PostRunState::CaptureDurable
             || snapshot_.postRun==PostRunState::Submitted)return true;
-        if(snapshot_.postRun!=PostRunState::CaptureInProgress)return false;
+        // 캡처는 UI 소유라 승인 전이 없이도 끝나 있을 수 있다(승인 프레임이
+        // 유실되거나 백엔드가 그 사이 재시작한 경우). 봉인본을 들고 있다는
+        // 보고는 그 자체로 사실이므로 awaiting_action 에서도 받는다.
+        // Capture is UI-owned and can finish without the grant transition (a lost
+        // frame, or a backend restart in between). Holding the envelope is a fact
+        // on its own, so accept the report from awaiting_action too.
+        if(snapshot_.postRun!=PostRunState::CaptureInProgress
+            && snapshot_.postRun!=PostRunState::AwaitingAction)return false;
         snapshot_.postRun=PostRunState::CaptureDurable;copy=publishable(snapshot_);
     }
     if(publish_)publish_(copy);
@@ -1476,7 +1498,18 @@ bool RunOrchestrator::markLeaderboardSubmitted(const std::string& runId,const st
         // replays it until the backend snapshot confirms Submitted.  A lost
         // reply must therefore be an idempotent success, not an error.
         if(snapshot_.postRun==PostRunState::Submitted)return true;
-        if(snapshot_.postRun!=PostRunState::CaptureDurable)return false;
+        // 제출 판정은 브라우저가 리더보드에서 직접 받아온 결과다. capture_durable
+        // 을 거쳐 왔는지는 우리가 알 바가 아니며, 요구했다가는 승인 전이가 없던
+        // 제출이 원장에 영영 기록되지 않는다. 리셋이 도는 중에만 거절해 제출된
+        // 보관본이 그 틈에 삭제되는 일을 막는다.
+        // The verdict comes from the browser's own leaderboard exchange. Whether
+        // it passed through capture_durable is not ours to require — demanding it
+        // left every submission without a grant transition missing from the
+        // ledger. Only a running reset refuses, so a submitted archive cannot be
+        // purged in the gap.
+        if(snapshot_.postRun==PostRunState::None
+            || snapshot_.postRun==PostRunState::ResetCleanupPreparing
+            || snapshot_.postRun==PostRunState::ResetCleanupPending)return false;
         // Keep the post-run transition and its durable ledger write mutually
         // exclusive with Reset so a submitted archive cannot be purged in the
         // gap between the two operations.

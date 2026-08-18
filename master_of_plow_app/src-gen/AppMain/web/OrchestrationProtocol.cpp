@@ -71,18 +71,22 @@ bool handleOrchestrationMessage(const Json::Value& message,
         controller.requestOrchestrationStart(request);
         return true;
     }
+    // 봉인 캡처 프레임은 통지다: 봉인본을 받아 리더보드로 보내는 일은 브라우저가
+    // 혼자 끝내고, 여기 오는 것은 그 진행을 화면에 비추기 위한 상태 전이 요청일
+    // 뿐이다. 그래서 전이가 안 먹었다고 오류 프레임을 띄우면 안 된다 — 제출은
+    // 멀쩡히 진행 중인데 사용자에게는 실패로 보이고, 붙어 있는 모든 대시보드로
+    // 뿌려진다.
+    // Sealed-capture frames are notices: the browser fetches the envelope and
+    // posts it to the leaderboard on its own, and these only ask the snapshot to
+    // mirror that progress. A rejected transition must therefore never raise an
+    // error frame — the submission is fine, but the user would read it as failed,
+    // on every attached dashboard.
     if(kind=="sealed_capture_durable"&&message["runId"].isString()) {
-        if(!controller.acknowledgeSealedCapture(message["runId"].asString())) {
-            Json::Value error;error["kind"]="orchestration_request_error";
-            error["error"]="sealed capture acknowledgement is not authorized";publishJson(error);
-        }
+        (void)controller.acknowledgeSealedCapture(message["runId"].asString());
         return true;
     }
     if(kind=="begin_sealed_capture"&&message["runId"].isString()) {
-        if(!controller.beginSealedCapture(message["runId"].asString())) {
-            Json::Value error;error["kind"]="orchestration_request_error";
-            error["error"]="sealed capture is not authorized";publishJson(error);
-        }
+        (void)controller.beginSealedCapture(message["runId"].asString());
         return true;
     }
     if(kind=="sealed_capture_failed"&&message["runId"].isString()) {

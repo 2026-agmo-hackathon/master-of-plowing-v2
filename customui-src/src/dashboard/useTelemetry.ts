@@ -124,6 +124,10 @@ export function useTelemetry(): Telemetry {
     useState<{ elapsedS?: number } | null>(null)
   const [tuning, setTuning] = useState<TuningState | null>(null)
   const [orchestration, setOrchestration] = useState<OrchestrationState | null>(null)
+  /** 최신 스냅샷 — 콜백이 리렌더에 얽히지 않고 팀 이름·주행 ID 를 읽는 통로.
+   *  The latest snapshot, so callbacks can read the team name and run id without
+   *  being re-created on every 2.5 s poll. */
+  const orchestrationRef=useRef<OrchestrationState | null>(null)
   const [authoritySnapshotSeq,setAuthoritySnapshotSeq]=useState(0)
   const [requestError,setRequestError]=useState<string | null>(null)
   /** 미응답 폴링의 발사 시각(ms). 0 이면 대기 중인 폴링이 없다.
@@ -228,6 +232,7 @@ export function useTelemetry(): Telemetry {
               const state=msg as OrchestrationState
               pollSentAtRef.current=0
               backendBusyRef.current=Boolean(state.busy || state.setupApplying)
+              orchestrationRef.current=state
               setOrchestration({...state,selection:{...state.selection,
                 receivedAtMonoMs:performance.now()}})
               setAuthoritySnapshotSeq((n)=>n+1)
@@ -429,7 +434,21 @@ export function useTelemetry(): Telemetry {
   },[authoritySnapshotSeq,orchestration])
 
   const retryLeaderboard=useCallback((runId:string)=>{void leaderboardServiceRef.current?.retry(runId)},[])
-  const submitLeaderboard=useCallback((runId:string)=>{send(buildSubmitIntent(runId))},[send])
+  // 제출은 UI 가 소유한다: 누르는 즉시 봉인본(.csv.enc)을 받아 리더보드로 보낸다.
+  // 백엔드로 가는 프레임은 화면 표시와 새로고침 복구를 위한 통지일 뿐이라,
+  // 백엔드가 그 전이를 거절해도 제출은 그대로 끝까지 간다. 예전에는 백엔드가
+  // 승인해 postRun 이 capture_in_progress 로 바뀌어야만 파이프라인이 시작돼서,
+  // 거절 한 번이 제출 자체를 불가능하게 만들었다.
+  // The UI owns submission: a press fetches the sealed envelope (.csv.enc) and
+  // posts it to the leaderboard right away. The backend frame is only a notice
+  // for display and reload-resume, so a refused transition no longer stops
+  // anything. Previously the pipeline started only once the backend had granted
+  // capture_in_progress, which made a single refusal fatal to submitting at all.
+  const submitLeaderboard=useCallback((runId:string)=>{
+    const teamName=orchestrationRef.current?.teamName
+    if(teamName)void leaderboardServiceRef.current?.enqueue(teamName,runId)
+    send(buildSubmitIntent(runId))
+  },[send])
   const resetRun=useCallback((runId:string,_discard:boolean)=>{
     send(buildResetIntent(runId))
   },[send])
