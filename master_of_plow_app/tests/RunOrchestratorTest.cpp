@@ -1061,11 +1061,60 @@ TEST(RunOrchestratorTest, A409NotRecordingConfirmsTheStopAgainstAFrozenHeader)
     ASSERT_TRUE(o.finish(true));
     EXPECT_EQ(o.snapshot().finalization,FinalizationState::Completed);
     EXPECT_EQ(o.snapshot().postRun,PostRunState::AwaitingAction);
-    // 첫 409 로 끝나야 한다. 30 번 재발행은 이 버그의 지문이었다.
-    // The first 409 has to settle it; thirty re-issues were the bug's fingerprint.
-    EXPECT_EQ(api.stopsAfterFreeze,1);
+    // 409 는 지름길이 아니라 대체 근거다: 확인 루프가 한 번 돌면서 낡은
+    // recording=true 를 보고 stop 을 다시 내고, 그 409 로 확정한다. 30 번
+    // 재발행이 이 버그의 지문이었으므로 몇 번 안에 끝나는지를 못박는다.
+    // The 409 is a fallback, not a shortcut: the loop turns once, sees the stale
+    // recording=true, re-issues the stop and settles on that 409. Thirty
+    // re-issues were the bug's fingerprint, so pin how few it now takes.
+    EXPECT_LE(api.stopsAfterFreeze,2);
     EXPECT_EQ(store.calls,1);
     EXPECT_EQ(finalized.load(),1);
+    EXPECT_TRUE(run.finished);
+}
+
+// ┌─ 한국어 ────────────────────────────────────────┐
+// 페이지가 살아 있으면 헤더가 진실이므로 409 하나로 확인을 건너뛰면 안 된다.
+// v1.1.63 은 초기 409 를 곧장 확정으로 삼아 확인 루프를 통째로 건너뛰었고,
+// 그 결과 4 초짜리 주행이 검증 없이 보관으로 넘어가 recAcceptable 의
+// "recorder still running" 에 걸렸다 (실측 2026-08-18, age 700ms/raf/120tps
+// 인 정상 페이지). 루프가 살아 있는 동안에는 헤더가 정지를 말할 때까지
+// 계속 확인해야 한다.
+// └────────────────────────────────────────────┘
+// ┌─ English ───────────────────────────────────────┐
+// While the page is alive the headers are the truth, so a lone 409 must not
+// skip the confirmation. v1.1.63 took the initial 409 as settled and skipped
+// the whole loop, so a four-second run reached the archive unverified and hit
+// recAcceptable's "recorder still running" (measured 2026-08-18 against a
+// healthy page: age 700 ms, raf, 120 ticks/s). With the loop alive, polling has
+// to continue until the header itself reports the stop.
+// └────────────────────────────────────────────┘
+TEST(RunOrchestratorTest, ALoneStopConflictDoesNotSkipConfirmationOnALivePage)
+{
+    struct LateStopApi : FakeApi {
+        int stateCalls=0;
+        // 서버는 409 로 "안 돌고 있다" 고 답하지만 헤더는 아직 돌고 있다고
+        // 말한다. 페이지가 살아 있으므로 헤더가 이긴다.
+        // The server answers 409 while the header still says recording. The page
+        // is alive, so the header wins.
+        ApiResult recordingStop() override { ++stopCalls; return {false,409,"not recording"}; }
+        ApiResult recordingState(RecorderState& out) override {
+            ++stateCalls;
+            if(stateCalls>=4) recorder.recording=false;
+            out=recorder;
+            return {true,200,{}};
+        }
+    } api;
+    FakeStore store; FakeRun run; RunOrchestrator o(api,store,run);
+    ASSERT_TRUE(o.start(request()));
+    api.recorder.recording=true;
+    const int before=api.stateCalls;
+    ASSERT_TRUE(o.finish(false));
+    // 확인 루프가 실제로 돌아야 한다 — 건너뛰면 이 값이 0 이다.
+    // The loop has to actually turn; skipping it leaves this at zero.
+    EXPECT_GE(api.stateCalls-before,3);
+    EXPECT_EQ(o.snapshot().finalization,FinalizationState::Completed);
+    EXPECT_EQ(store.calls,1);
     EXPECT_TRUE(run.finished);
 }
 

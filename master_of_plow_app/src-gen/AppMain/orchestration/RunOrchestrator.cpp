@@ -1116,30 +1116,34 @@ bool RunOrchestrator::finishImpl(bool, bool duringShutdown)
         return finalizationFailed("recording stop: "+stop.error);
     RecorderState recorder;
     // ┌─ 한국어 ────────────────────────────────────────┐
-    // 409 {"error":"not recording"} 는 API 서버 자신의 확답이다: 지금 돌고 있는
-    // 기록이 없다. 예전에는 이것을 "무해하니 무시" 정도로만 다뤘고, 확인은
-    // 아래 헤더에만 맡겼다. 그런데 헤더는 서버 상태가 아니다 (아래 참고) —
-    // 페이지가 얼면 서버가 409 로 "안 돌고 있다" 고 답하는 동안 헤더는
-    // X-Rec-Recording: true 를 계속 내놓는다. 실측된 이 모순 때문에 종결이
-    // stop 을 30 번 재발행하고 "recording stop confirmation timed out" 으로
-    // 끝났다. 답을 들었으면 그것이 확인이다.
+    // 409 {"error":"not recording"} 는 대체 근거이지 지름길이 아니다. 루프가
+    // 살아 있으면 헤더가 진실이므로 아래 확인 루프가 판정한다. 루프가 죽은
+    // 것이 증명됐을 때에만 409 가 유일한 진실이 된다 (그때 헤더는 정지한
+    // 페이지 스냅샷을 타고 온 낡은 true 다).
+    //
+    // v1.1.63 은 여기서 곧장 stoppedConfirmed 로 만들어 확인 루프를 통째로
+    // 건너뛰게 했다. 그 결과 페이지가 멀쩡한 4 초짜리 주행에서 검증 없이
+    // 보관으로 넘어갔고, recAcceptable 이 recording=true 를 보고
+    // "recorder still running" 으로 거절했다. 지름길이 정확히 그 검증을
+    // 없앴다.
     // └────────────────────────────────────────────┘
     // ┌─ English ───────────────────────────────────────┐
-    // A 409 {"error":"not recording"} is the API server's own answer: nothing is
-    // recording. This used to be merely tolerated as harmless, leaving the
-    // confirmation to the headers below - but those headers are not server state
-    // (see below). With the page frozen the server answers 409 "not recording"
-    // while the header keeps reporting X-Rec-Recording: true. That measured
-    // contradiction made finalization re-issue the stop thirty times and end in
-    // "recording stop confirmation timed out". An answer received is a
-    // confirmation.
+    // A 409 {"error":"not recording"} is a fallback, not a shortcut. While the
+    // loop is alive the headers are the truth and the confirmation loop below
+    // decides; only once the loop is provably down does the 409 become the only
+    // truth left, because then the header is a stale true riding a stopped
+    // page's snapshot.
+    //
+    // v1.1.63 turned this into an immediate stoppedConfirmed and skipped the
+    // whole confirmation loop. On a healthy page a four-second run then went to
+    // the archive unverified, where recAcceptable saw recording=true and refused
+    // with "recorder still running" - the shortcut had removed exactly the check
+    // that settles this.
     // └────────────────────────────────────────────┘
-    bool stoppedConfirmed=stop.status==409;
+    bool stoppedConfirmed=false;
     bool absentNow=false;
     int consecutiveFreshStopped=0;
     constexpr int REQUIRED_STOPPED_SAMPLES=3;
-    // 확답을 이미 받았으면 폴링하지 않는다.
-    // No polling once the answer is already in hand.
     for(int attempt=0;attempt<30 && !stoppedConfirmed;++attempt) {
         if(shuttingDown() && !duringShutdown)
             return finalizationFailed("finalization cancelled by shutdown");
@@ -1186,7 +1190,9 @@ bool RunOrchestrator::finishImpl(bool, bool duringShutdown)
             const ApiResult repeatedStop=api_.recordingStop();
             if(!repeatedStop.ok && repeatedStop.status!=409)
                 return finalizationFailed("repeated recording stop: "+repeatedStop.error);
-            if(repeatedStop.status==409) { stoppedConfirmed=true; break; }
+            // 루프가 살아 있는 동안에는 헤더를 믿고 계속 확인한다.
+            // While the loop is alive the header is believed and polling goes on.
+            if(repeatedStop.status==409 && loopDown) { stoppedConfirmed=true; break; }
         } else if(usable) {
             ++consecutiveFreshStopped;
             if(consecutiveFreshStopped>=REQUIRED_STOPPED_SAMPLES) {
